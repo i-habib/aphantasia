@@ -20,6 +20,10 @@ from scipy.stats import chi2, norm, t
 
 ESTIMATE_COLUMNS = ["project", "model", "cohort", "outcome", "term", "coef", "se", "ci_low", "ci_high", "p", "effect_kind", "n"]
 Z975 = float(norm.ppf(0.975))
+P1_DIRECT_CONTRASTS = {
+    "common_imagery_shift": {"visual_z": 1.0, "nonvisual_z": 1.0},
+    "visual_minus_nonvisual": {"visual_z": 1.0, "nonvisual_z": -1.0},
+}
 
 
 @dataclass
@@ -98,16 +102,19 @@ def _logit_hc3(y: np.ndarray, x: np.ndarray) -> tuple[np.ndarray, np.ndarray, di
                             "beta_max_abs": float(np.max(np.abs(beta))), "probability_min": float(probability.min()),
                             "probability_max": float(probability.max()), "weight_min": float(weight.min())})
     bread = np.linalg.inv(information)
-    leverage = weight * np.einsum("ij,jk,ik->i", x, bread, x)
+    # statsmodels' GLM path currently falls back to its White score
+    # sandwich when ``cov_type='HC3'`` is requested. Match that independent
+    # implementation exactly so the engine has a numerical reference. The
+    # Firth fallback below remains model-based because sparse separation makes
+    # a conventional robust covariance unstable.
     score = x * (y - probability)[:, None]
-    score /= np.maximum(1.0 - leverage, 1e-8)[:, None]
     covariance = bread @ (score.T @ score) @ bread
     gradient_norm = float(np.max(np.abs(objective(beta)[1])))
     if (np.max(np.abs(beta)) > 18) or not np.isfinite(covariance).all():
         raise AnalysisStop("blocked", "separation_or_unstable_logit", "The logistic model appears separated or numerically unstable.", {"gradient_max_abs": gradient_norm})
     if not fit.success and gradient_norm > 1e-4:
         raise AnalysisStop("blocked", "logit_not_converged", "The logistic model did not converge.", {"optimizer": str(fit.message), "gradient_max_abs": gradient_norm})
-    return beta, covariance, {"n": int(n), "events": int(y.sum()), "non_events": int(n - y.sum()), "covariance": "HC3", "optimizer": str(fit.message), "gradient_max_abs": gradient_norm}
+    return beta, covariance, {"n": int(n), "events": int(y.sum()), "non_events": int(n - y.sum()), "covariance": "statsmodels-compatible White score sandwich", "optimizer": str(fit.message), "gradient_max_abs": gradient_norm}
 
 
 def _logit_firth(y: np.ndarray, x: np.ndarray) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
@@ -169,8 +176,34 @@ def _rows(beta: np.ndarray, covariance: np.ndarray, names: list[str], *, project
     return rows
 
 
+def _contrast_rows(beta: np.ndarray, covariance: np.ndarray, names: list[str], contrasts: dict[str, dict[str, float]], *,
+                   project: str, model: str, cohort: str, outcome: str, effect_kind: str, n: int) -> list[dict[str, Any]]:
+    """Return exponentiated linear contrasts from one fitted logistic model."""
+    index = {name: position for position, name in enumerate(names)}
+    rows: list[dict[str, Any]] = []
+    for label, weights in contrasts.items():
+        vector = np.zeros(len(names), dtype=float)
+        for term, weight in weights.items():
+            if term not in index:
+                raise AnalysisStop("blocked", "unknown_contrast_term", f"Contrast {label} references absent term {term}.")
+            vector[index[term]] = float(weight)
+        estimate = float(vector @ beta)
+        variance = float(vector @ covariance @ vector)
+        se = math.sqrt(max(0.0, variance))
+        statistic = estimate / se if se > 0 else math.nan
+        p_value = float(2 * norm.sf(abs(statistic))) if math.isfinite(statistic) else math.nan
+        low = estimate - Z975 * se
+        high = estimate + Z975 * se
+        rows.append({"project": project, "model": model, "cohort": cohort, "outcome": outcome,
+                     "term": label, "coef": math.exp(estimate), "se": se,
+                     "ci_low": math.exp(low), "ci_high": math.exp(high), "p": p_value,
+                     "effect_kind": f"odds_ratio_contrast_{effect_kind.removeprefix('odds_ratio_')}", "n": int(n)})
+    return rows
+
+
 def _fit_logit(frame: pd.DataFrame, *, project: str, model: str, cohort: str, outcome: str,
-               numeric: list[str], categorical: list[str], outcome_name: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+               numeric: list[str], categorical: list[str], outcome_name: str,
+               contrasts: dict[str, dict[str, float]] | None = None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     required = [outcome_name, *numeric, *categorical]
     use = frame[required].copy()
     missing = {name: int(use[name].isna().sum() + use[name].astype("string").eq("").sum()) for name in required}
@@ -181,17 +214,23 @@ def _fit_logit(frame: pd.DataFrame, *, project: str, model: str, cohort: str, ou
     x, names = _matrix(use, numeric, categorical)
     try:
         beta, covariance, diagnostics = _logit_hc3(y, x)
-        effect_kind = "odds_ratio_HC3"
+        effect_kind = "odds_ratio_robust_score"
     except AnalysisStop as stop:
         if stop.code not in {"singular_logit", "separation_or_unstable_logit", "logit_not_converged"}:
             raise
         beta, covariance, diagnostics = _logit_firth(y, x)
         diagnostics["fallback_reason"] = stop.code
         effect_kind = "odds_ratio_Firth_model_based"
-    return _rows(beta, covariance, names, project=project, model=model, cohort=cohort,
-                 outcome=outcome, effect_kind=effect_kind, n=len(use), odds_ratio=True), {
-                     **diagnostics, "complete_case_n": int(len(use)), "missing_before_complete_case": missing,
-                     "outcome_yes": int(y.sum()), "outcome_no": int(len(y) - y.sum())}
+    rows = _rows(beta, covariance, names, project=project, model=model, cohort=cohort,
+                 outcome=outcome, effect_kind=effect_kind, n=len(use), odds_ratio=True)
+    if contrasts:
+        rows.extend(_contrast_rows(beta, covariance, names, contrasts, project=project, model=model,
+                                   cohort=cohort, outcome=outcome, effect_kind=effect_kind, n=len(use)))
+    return rows, {
+        **diagnostics, "complete_case_n": int(len(use)), "missing_before_complete_case": missing,
+        "outcome_yes": int(y.sum()), "outcome_no": int(len(y) - y.sum()),
+        **({"contrasts": contrasts} if contrasts else {}),
+    }
 
 
 def _fit_ols(frame: pd.DataFrame, *, project: str, model: str, cohort: str, outcome: str,
@@ -207,10 +246,9 @@ def _fit_ols(frame: pd.DataFrame, *, project: str, model: str, cohort: str, outc
                  outcome=outcome, effect_kind="mean_difference_HC3", n=len(use), p_df=len(use)-x.shape[1]), diagnostics
 
 
-def _fit_ols_cluster(frame: pd.DataFrame, *, cluster: str, project: str, model: str,
-                     cohort: str, outcome: str, y_name: str, numeric: list[str],
-                     categorical: list[str]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """OLS with a participant-clustered sandwich covariance for repeated measures."""
+def _ols_cluster_state(frame: pd.DataFrame, *, cluster: str, numeric: list[str],
+                       categorical: list[str], y_name: str) -> tuple[pd.DataFrame, np.ndarray, list[str], np.ndarray, np.ndarray, dict[str, Any]]:
+    """Fit state for a participant-clustered OLS model, retaining covariance in memory."""
     required = [y_name, cluster, *numeric, *categorical]
     use = frame[required].copy().replace({"": np.nan}).dropna(subset=required)
     y = pd.to_numeric(use[y_name], errors="coerce").to_numpy(dtype=float)
@@ -236,12 +274,21 @@ def _fit_ols_cluster(frame: pd.DataFrame, *, cluster: str, project: str, model: 
     if not np.isfinite(covariance).all():
         raise AnalysisStop("blocked", "invalid_cluster_covariance", "Clustered covariance is non-finite.")
     diagnostics = {"n": int(n), "clusters": int(len(unique)), "covariance": "participant-clustered sandwich (CR1)", "rank": int(np.linalg.matrix_rank(x))}
+    return use, x, names, beta, covariance, diagnostics
+
+
+def _fit_ols_cluster(frame: pd.DataFrame, *, cluster: str, project: str, model: str,
+                     cohort: str, outcome: str, y_name: str, numeric: list[str],
+                     categorical: list[str]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """OLS with a participant-clustered sandwich covariance for repeated measures."""
+    use, _x, names, beta, covariance, diagnostics = _ols_cluster_state(
+        frame, cluster=cluster, numeric=numeric, categorical=categorical, y_name=y_name)
     return _rows(beta, covariance, names, project=project, model=model, cohort=cohort,
-                 outcome=outcome, effect_kind="mean_difference_clustered", n=n, p_df=n-p), diagnostics
+                 outcome=outcome, effect_kind="mean_difference_clustered", n=len(use), p_df=len(use)-len(names)), diagnostics
 
 
 def run_p1(frame: pd.DataFrame, output_dir: Path) -> dict[str, Any]:
-    required = {"study_id", "treatment", "nonvisual_z", "visual_z", "general_z", "visual_deviation", "age", "sex_gender"}
+    required = {"study_id", "treatment", "nonvisual_z", "visual_z", "general_z", "visual_aphantasia", "visual_hyperphantasia", "age", "sex_gender"}
     missing = sorted(required - set(frame.columns))
     if missing:
         raise AnalysisStop("blocked", "missing_p1_fields", f"Missing P1 fields: {', '.join(missing)}")
@@ -260,7 +307,7 @@ def run_p1(frame: pd.DataFrame, output_dir: Path) -> dict[str, Any]:
             "status": "confirmed from archived questionnaires",
         },
         "models": [],
-        "coordinate_system_note": "The direct visual + nonvisual model and the general-imagery + visual-deviation model answer different substantive questions. Residualizing visual imagery does not create a visual sensitivity analysis with a different visual coefficient; it changes the interpretation of the nonvisual term.",
+        "coordinate_system_note": "The direct visual + nonvisual model is primary. The general-imagery-only model is a distinct estimand. Linear common-shift and visual-minus-nonvisual contrasts are computed from the same direct model; no separate general-plus-deviation regression is treated as robustness evidence.",
     }
     for study in (1, 2):
         cohort = frame.loc[pd.to_numeric(frame["study_id"], errors="coerce") == study].copy()
@@ -269,7 +316,8 @@ def run_p1(frame: pd.DataFrame, output_dir: Path) -> dict[str, Any]:
         estimated, diagnostics = _fit_logit(cohort, project="P1", model=f"study_{study}_treatment_primary",
                                             cohort=f"study_{study}", outcome="current_treatment",
                                             numeric=["visual_z", "nonvisual_z", "age"],
-                                            categorical=["sex_gender"], outcome_name="treatment")
+                                            categorical=["sex_gender"], outcome_name="treatment",
+                                            contrasts=P1_DIRECT_CONTRASTS)
         rows.extend(estimated)
         details["models"].append({"name": f"study_{study}_treatment_primary", "estimand": "visual and nonvisual conditional associations", **diagnostics})
 
@@ -279,12 +327,21 @@ def run_p1(frame: pd.DataFrame, output_dir: Path) -> dict[str, Any]:
         rows.extend(general)
         details["models"].append({"name": f"study_{study}_general_imagery_secondary", "estimand": "all-modality mean composite", **general_diag})
 
-        deviation, deviation_diag = _fit_logit(cohort, project="P1", model=f"study_{study}_visual_deviation_secondary",
-                                               cohort=f"study_{study}", outcome="current_treatment",
-                                               numeric=["general_z", "visual_deviation", "age"],
-                                               categorical=["sex_gender"], outcome_name="treatment")
-        rows.extend(deviation)
-        details["models"].append({"name": f"study_{study}_visual_deviation_secondary", "estimand": "visual minus nonvisual deviation conditional on general imagery", **deviation_diag})
+        # Exploratory shape check: the New source script defines visual
+        # aphantasia as image == 5 and hyperphantasia as image >= 35. The
+        # middle of the observed visual distribution is the reference group.
+        threshold, threshold_diag = _fit_logit(
+            cohort, project="P1", model=f"study_{study}_visual_threshold_secondary",
+            cohort=f"study_{study}", outcome="current_treatment",
+            numeric=["visual_aphantasia", "visual_hyperphantasia", "nonvisual_z", "age"],
+            categorical=["sex_gender"], outcome_name="treatment")
+        rows.extend(threshold)
+        details["models"].append({
+            "name": f"study_{study}_visual_threshold_secondary",
+            "estimand": "source-defined visual extremes versus middle, conditional on nonvisual imagery",
+            "source_cutpoints": {"visual_aphantasia": "image == 5", "visual_hyperphantasia": "image >= 35"},
+            **threshold_diag,
+        })
 
         # Source-paper eligibility was 18–30; the primary retains the exact
         # published QC sample and this sensitivity enforces the recorded age
@@ -294,7 +351,8 @@ def run_p1(frame: pd.DataFrame, output_dir: Path) -> dict[str, Any]:
         age_rows, age_diag = _fit_logit(age_subset, project="P1", model=f"study_{study}_age_18_30_sensitivity",
                                         cohort=f"study_{study}_age_18_30", outcome="current_treatment",
                                         numeric=["visual_z", "nonvisual_z", "age"],
-                                        categorical=["sex_gender"], outcome_name="treatment")
+                                        categorical=["sex_gender"], outcome_name="treatment",
+                                        contrasts=P1_DIRECT_CONTRASTS)
         rows.extend(age_rows)
         details["models"].append({"name": f"study_{study}_age_18_30_sensitivity", **age_diag})
 
@@ -302,7 +360,8 @@ def run_p1(frame: pd.DataFrame, output_dir: Path) -> dict[str, Any]:
             ndd, ndd_diag = _fit_logit(cohort, project="P1", model="study_2_ndd_secondary",
                                        cohort="study_2", outcome="diagnosed_or_suspected_NDD",
                                        numeric=["visual_z", "nonvisual_z", "age"],
-                                       categorical=["sex_gender"], outcome_name="ndd")
+                                       categorical=["sex_gender"], outcome_name="ndd",
+                                       contrasts=P1_DIRECT_CONTRASTS)
             rows.extend(ndd)
             details["models"].append({"name": "study_2_ndd_secondary", **ndd_diag,
                                        "interpretation": "broad self-reported diagnosed-or-strongly-suspected NDD; not autism-specific"})
@@ -318,7 +377,13 @@ def run_p1(frame: pd.DataFrame, output_dir: Path) -> dict[str, Any]:
     pooled_rows, pooled_diag = _fit_logit(pooled, project="P1", model="pooled_treatment_study_interactions",
                                           cohort="studies_1_and_2", outcome="current_treatment",
                                           numeric=["visual_z", "nonvisual_z", "study_2_indicator", "visual_x_study_2", "nonvisual_x_study_2", "age"],
-                                          categorical=["sex_gender"], outcome_name="treatment")
+                                          categorical=["sex_gender"], outcome_name="treatment",
+                                          contrasts={
+                                              "common_imagery_shift_study_1": {"visual_z": 1.0, "nonvisual_z": 1.0},
+                                              "visual_minus_nonvisual_study_1": {"visual_z": 1.0, "nonvisual_z": -1.0},
+                                              "common_imagery_shift_study_2": {"visual_z": 1.0, "nonvisual_z": 1.0, "visual_x_study_2": 1.0, "nonvisual_x_study_2": 1.0},
+                                              "visual_minus_nonvisual_study_2": {"visual_z": 1.0, "nonvisual_z": -1.0, "visual_x_study_2": 1.0, "nonvisual_x_study_2": -1.0},
+                                          })
     rows.extend(pooled_rows)
     details["models"].append({"name": "pooled_treatment_study_interactions", "estimand": "Study 1 reference effects plus Study 2 study-by-imagery interactions", **pooled_diag})
     estimates = pd.DataFrame(rows, columns=ESTIMATE_COLUMNS)
@@ -341,6 +406,87 @@ def _hedges_g(a: np.ndarray, b: np.ndarray) -> tuple[float, float, float, float,
     g = correction * d
     se = math.sqrt((n1 + n0) / (n1 * n0) + g * g / (2.0 * df))
     return g, se, g - Z975 * se, g + Z975 * se, float(2 * norm.sf(abs(g / se)))
+
+
+def _build_repeated_modality_frame(group_frame: pd.DataFrame, modalities: list[str], *, standardized: bool,
+                                   nuisance_interactions: bool) -> tuple[pd.DataFrame, str, list[str], list[str]]:
+    """Build a long repeated-outcome frame and prespecified interaction columns."""
+    base = group_frame.reset_index(drop=True)
+    long_rows: list[dict[str, Any]] = []
+    for participant_index, (_, person) in enumerate(base.iterrows()):
+        for modality in modalities:
+            long_rows.append({
+                "participant_index": participant_index,
+                "diagnosis_group": person["diagnosis_group"],
+                "age": person["age"],
+                "sex_gender": person["sex_gender"],
+                "modality": modality,
+                "score": person[modality],
+            })
+    repeated = pd.DataFrame(long_rows)
+    outcome_column = "score"
+    if standardized:
+        repeated["score_standardized"] = np.nan
+        for modality in modalities:
+            values = pd.to_numeric(base[modality], errors="coerce")
+            mean = float(values.mean())
+            sd = float(values.std(ddof=0))
+            if not np.isfinite(sd) or sd <= 0:
+                raise AnalysisStop("blocked", "invalid_modality_standardization", f"{modality} has invalid variance.")
+            mask = repeated["modality"].eq(modality)
+            repeated.loc[mask, "score_standardized"] = (pd.to_numeric(repeated.loc[mask, "score"], errors="coerce") - mean) / sd
+        outcome_column = "score_standardized"
+
+    reference = modalities[0]
+    nonreference = [modality for modality in modalities if modality != reference]
+    for modality in nonreference:
+        indicator = repeated["modality"].eq(modality).astype(float)
+        repeated[f"modality_{modality}"] = indicator
+        repeated[f"autism_x_{modality}"] = pd.to_numeric(repeated["diagnosis_group"], errors="coerce") * indicator
+        if nuisance_interactions:
+            repeated[f"age_x_{modality}"] = pd.to_numeric(repeated["age"], errors="coerce") * indicator
+
+    sex_levels = sorted(base["sex_gender"].astype("string").dropna().unique())
+    sex_interaction_terms: list[str] = []
+    if nuisance_interactions:
+        for modality in nonreference:
+            indicator = repeated["modality"].eq(modality).astype(float)
+            for level_index, level in enumerate(sex_levels[1:], start=1):
+                term = f"sex_level_{level_index}_x_{modality}"
+                repeated[term] = repeated["sex_gender"].astype("string").eq(level).astype(float) * indicator
+                sex_interaction_terms.append(term)
+    return repeated, outcome_column, nonreference, sex_interaction_terms
+
+
+def _fit_repeated_modality_model(group_frame: pd.DataFrame, *, modalities: list[str], model: str,
+                                 standardized: bool = False, nuisance_interactions: bool = False) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    repeated, outcome_column, nonreference, sex_interaction_terms = _build_repeated_modality_frame(
+        group_frame, modalities, standardized=standardized, nuisance_interactions=nuisance_interactions)
+    modality_terms = [f"modality_{modality}" for modality in nonreference]
+    autism_terms = [f"autism_x_{modality}" for modality in nonreference]
+    age_terms = [f"age_x_{modality}" for modality in nonreference] if nuisance_interactions else []
+    numeric = ["diagnosis_group", "age", *modality_terms, *autism_terms, *age_terms, *sex_interaction_terms]
+    use, _x, names, beta, covariance, diagnostics = _ols_cluster_state(
+        repeated, cluster="participant_index", numeric=numeric, categorical=["sex_gender"], y_name=outcome_column)
+    rows = _rows(beta, covariance, names, project="P3", model=model,
+                 cohort="arnold_2026_all_self_reported_formal_dx", outcome=outcome_column,
+                 effect_kind="mean_difference_clustered", n=len(use), p_df=len(use)-len(names))
+    interaction_indices = [names.index(term) for term in autism_terms]
+    interaction_beta = beta[interaction_indices]
+    interaction_covariance = covariance[np.ix_(interaction_indices, interaction_indices)]
+    joint_stat = float(interaction_beta @ np.linalg.pinv(interaction_covariance) @ interaction_beta)
+    diagnostics.update({
+        "reference_modality": modalities[0],
+        "modalities": modalities,
+        "interaction_terms": autism_terms,
+        "joint_autism_by_modality_wald_chi2": joint_stat,
+        "joint_autism_by_modality_df": len(autism_terms),
+        "joint_autism_by_modality_p": float(chi2.sf(joint_stat, len(autism_terms))),
+        "standardized_outcome": standardized,
+        "nuisance_age_by_modality_and_sex_by_modality": nuisance_interactions,
+        "interpretation": "omnibus test of whether autism-group differences vary by modality; participant-clustered covariance",
+    })
+    return rows, diagnostics
 
 
 def run_p3(group_frame: pd.DataFrame, trait_frame: pd.DataFrame, output_dir: Path,
@@ -378,62 +524,23 @@ def run_p3(group_frame: pd.DataFrame, trait_frame: pd.DataFrame, output_dir: Pat
             rows.extend(adjusted)
 
     # The six modality scores are repeated outcomes from the same people, so
-    # their effects cannot be treated as six independent tests. A long-format
-    # model with a participant-clustered sandwich estimates a common diagnosis
-    # effect (visual is the reference modality) and autism-by-modality
-    # deviations. The joint Wald test of those deviations is the key question.
-    long_parts: list[pd.DataFrame] = []
-    base_columns = ["diagnosis_group", "age", "sex_gender"]
-    for participant_index, (_, person) in enumerate(group_frame.reset_index(drop=True).iterrows()):
-        for modality in ("visual", "auditory", "smell", "taste", "touch", "movement"):
-            item = {field: person[field] for field in base_columns}
-            item.update({"participant_index": participant_index, "modality": modality, "score": person[modality]})
-            long_parts.append(pd.DataFrame([item]))
-    repeated = pd.concat(long_parts, ignore_index=True)
-    nonreference_modalities = ["auditory", "smell", "taste", "touch", "movement"]
-    for modality in nonreference_modalities:
-        indicator = (repeated["modality"] == modality).astype(float)
-        repeated[f"modality_{modality}"] = indicator
-        repeated[f"autism_x_{modality}"] = pd.to_numeric(repeated["diagnosis_group"], errors="coerce") * indicator
-    repeated_rows, repeated_diag = _fit_ols_cluster(
-        repeated, cluster="participant_index", project="P3", model="repeated_modality_clustered",
-        cohort="arnold_2026_all_self_reported_formal_dx", outcome="imagery_score", y_name="score",
-        numeric=["diagnosis_group", "age", *[f"modality_{m}" for m in nonreference_modalities],
-                 *[f"autism_x_{m}" for m in nonreference_modalities]], categorical=["sex_gender"])
-    rows.extend(repeated_rows)
-    interaction_terms = [f"autism_x_{m}" for m in nonreference_modalities]
-    # Reconstruct the interaction covariance from the same fitted design so
-    # that the omnibus test remains aggregate-only and participant IDs stay out
-    # of all persisted artifacts.
-    use = repeated[["score", "participant_index", "diagnosis_group", "age", *[f"modality_{m}" for m in nonreference_modalities],
-                    *interaction_terms, "sex_gender"]].dropna()
-    x, names = _matrix(use, ["diagnosis_group", "age", *[f"modality_{m}" for m in nonreference_modalities], *interaction_terms], ["sex_gender"])
-    y = pd.to_numeric(use["score"], errors="coerce").to_numpy(dtype=float)
-    beta = np.linalg.inv(x.T @ x) @ (x.T @ y)
-    residual = y - x @ beta
-    clusters = use["participant_index"].to_numpy()
-    unique = pd.unique(clusters)
-    meat = np.zeros((x.shape[1], x.shape[1]), dtype=float)
-    for value in unique:
-        mask = clusters == value
-        score = x[mask].T @ residual[mask]
-        meat += np.outer(score, score)
-    bread = np.linalg.inv(x.T @ x)
-    covariance = bread @ meat @ bread
-    covariance *= (len(unique) / max(len(unique) - 1, 1)) * ((len(use) - 1) / max(len(use) - x.shape[1], 1))
-    indices = [names.index(term) for term in interaction_terms]
-    interaction_beta = beta[indices]
-    interaction_cov = covariance[np.ix_(indices, indices)]
-    joint_stat = float(interaction_beta @ np.linalg.pinv(interaction_cov) @ interaction_beta)
-    joint_p = float(chi2.sf(joint_stat, len(indices)))
-    repeated_diag.update({
-        "reference_modality": "visual",
-        "interaction_terms": interaction_terms,
-        "joint_autism_by_modality_wald_chi2": joint_stat,
-        "joint_autism_by_modality_df": len(indices),
-        "joint_autism_by_modality_p": joint_p,
-        "interpretation": "omnibus test of whether autism-group differences vary by modality; participant-clustered covariance",
-    })
+    # their effects cannot be treated as six independent tests. The primary
+    # long-format model and three prespecified stress variants use the same
+    # participant-clustered covariance and joint autism-by-modality Wald test.
+    all_modalities = ["visual", "auditory", "smell", "taste", "touch", "movement"]
+    repeated_specs = [
+        ("repeated_modality_clustered", all_modalities, False, False),
+        ("repeated_modality_clustered_standardized", all_modalities, True, False),
+        ("repeated_modality_clustered_nuisance", all_modalities, False, True),
+        ("repeated_modality_clustered_without_smell", ["visual", "auditory", "taste", "touch", "movement"], False, False),
+    ]
+    repeated_diagnostics: dict[str, dict[str, Any]] = {}
+    for model_name, modalities, standardized, nuisance in repeated_specs:
+        repeated_rows, repeated_diag = _fit_repeated_modality_model(
+            group_frame, modalities=modalities, model=model_name,
+            standardized=standardized, nuisance_interactions=nuisance)
+        rows.extend(repeated_rows)
+        repeated_diagnostics[model_name] = repeated_diag
 
     trait_required = {"age", "sex_gender", "AQ_total", "AQ_nonimagination", *required - {"diagnosis_group", "age", "sex_gender"}}
     trait_missing = sorted(trait_required - set(trait_frame.columns))
@@ -474,7 +581,8 @@ def run_p3(group_frame: pd.DataFrame, trait_frame: pd.DataFrame, output_dir: Pat
                    },
                    "formal_diagnosis_cohort": "Arnold 2026, code-embedded self-reported formally diagnosed participants and prior comparison sample",
                    "modalities": modality_details, "trait_family_results": trait_families,
-                   "repeated_modality_model": repeated_diag,
+                   "repeated_modality_model": repeated_diagnostics["repeated_modality_clustered"],
+                   "repeated_modality_stress_tests": repeated_diagnostics,
                    "trait_frame_missing_columns": trait_missing,
                    "author_code_sensitivity": "The author's MATLAB code filters the 327 diagnosed respondents to AQ >= 26 (N=242); estimates are reported separately from all 327 diagnosed respondents.",
                    "pooling": "No pooled autism meta-analysis: one formal-diagnosis cohort was processed; New et al. NDD is broad and remains separate.",

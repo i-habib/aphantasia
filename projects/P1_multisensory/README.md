@@ -13,7 +13,7 @@
 
 The source tables contain 953 and 1,020 rows. Applying the source `nbact >= 3` rule yields N=949 and N=1,003. The loader keeps the source rows in memory, scores the common imagery fields, and removes participant keys, comments, and open-response text before returning an analysis frame.
 
-The current exploratory models fit each study separately: confirmed treatment field `diag` predicted by direct visual and seven-modality nonvisual z-score terms, age, and recorded sex/gender. Additional models use an all-modality mean composite and a visual-minus-nonvisual deviation, plus a pooled study-by-imagery interaction model. Outputs are odds ratios with 95% intervals. An age 18–30 sensitivity is generated. Study 2's diagnosed-or-strongly-suspected NDD field is secondary and must never be described as autism-specific.
+The current exploratory models fit each study separately: confirmed treatment field `diag` predicted by direct visual and seven-modality nonvisual z-score terms, age, and recorded sex/gender. The completed nonvisual and all-modality means are re-standardized within study. A separate general-imagery mean model and linear common-shift / visual-minus-nonvisual contrasts from the direct model are reported, plus a pooled study-by-imagery interaction model. Outputs are odds ratios with 95% intervals. An age 18–30 sensitivity is generated. Study 2's diagnosed-or-strongly-suspected NDD field is secondary and must never be described as autism-specific.
 
 The exact treatment/NDD wording, response coding, and `diag2` branch are documented in the [questionnaire crosswalk](protocol/questionnaire-crosswalk.md).
 

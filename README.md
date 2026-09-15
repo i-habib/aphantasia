@@ -11,7 +11,8 @@ python3 -m aphantasia.cli --project all
 python3 -m pytest
 ```
 
+The validated environment is pinned in [`requirements-lock.txt`](requirements-lock.txt). Install those exact global user-site versions with `python3 -m pip install --user -r requirements-lock.txt`; no VM or virtual environment is required.
+
 The pipeline reads the staged public archives in memory and writes only aggregate outputs under `runs/latest/`. Source fingerprints and licensing/provenance notes are in [`DATA_SOURCES.md`](DATA_SOURCES.md); the execution sequence is in [`execution-roadmap.md`](execution-roadmap.md); current exploratory results are in [`RESULTS_SUMMARY.md`](RESULTS_SUMMARY.md).
 
 Raw archives, participant identifiers, open responses, interview transcripts, and generated run products are excluded by `.gitignore`. Check each repository's reuse terms before redistributing source material.
-

@@ -1,6 +1,6 @@
 # Analysis runbook
 
-This workspace is set up to run from the system Python and its globally installed scientific packages. It does not create or activate a virtual environment. The pipeline needs the already-available `numpy`, `pandas`, and `scipy`; it does not require statsmodels, patsy, openpyxl, R, or a VM. The first-pass aggregate estimates and limitations are in [`RESULTS_SUMMARY.md`](RESULTS_SUMMARY.md); they are exploratory pending the measurement and novelty gates in the project briefs.
+This workspace is set up to run from the system Python and its globally installed scientific packages. It does not create or activate a virtual environment. The pipeline needs `numpy`, `pandas`, and `scipy`; the test suite also uses `statsmodels` as an independent numerical reference for the custom logistic, clustered-OLS, and repeated-modality calculations. The runtime does not require openpyxl, R, or a VM. The first-pass aggregate estimates and limitations are in [`RESULTS_SUMMARY.md`](RESULTS_SUMMARY.md); they are exploratory pending the measurement and novelty gates in the project briefs.
 
 ## One-command run
 
@@ -53,14 +53,16 @@ logit Pr(diag = 1) = intercept + β1(visual z) + β2(nonvisual composite)
                      + β3(age) + sex/gender indicators
 ```
 
-`diag` is the confirmed binary response to “Are you currently receiving treatment for a neurologic or psychiatric condition?” with No/Yes choices. `diag2` is an open-response follow-up shown only after Yes and is excluded. The seven-item nonvisual composite is the mean of within-study z scores for sound, touch, motor, taste, smell, emotion, and voice. The direct model uses visual and nonvisual terms; a separate general-imagery model uses the mean of all eight z-scored modalities, and a visual-deviation model uses visual minus nonvisual conditional on that general score. Effects are odds ratios with 95% intervals. These models estimate associations conditional on the declared predictors; they are not causal.
+`diag` is the confirmed binary response to “Are you currently receiving treatment for a neurologic or psychiatric condition?” with No/Yes choices. `diag2` is an open-response follow-up shown only after Yes and is excluded. The seven-item nonvisual composite is the mean of within-study z scores for sound, touch, motor, taste, smell, emotion, and voice, then re-standardized within study. The all-modality general-imagery composite is constructed and re-standardized the same way. The direct model uses visual and nonvisual terms; the separate general-imagery model uses the general composite. Common-imagery-shift and visual-minus-nonvisual linear contrasts come from the direct model's covariance matrix. Effects are odds ratios with 95% intervals. These models estimate associations conditional on the declared predictors; they are not causal.
+
+The runner also emits an explicitly exploratory threshold model using the source script's visual cut points (`image == 5` and `image >= 35`) against the middle visual range. This is the threshold-versus-dose-response comparison; cut points are not tuned to the current-treatment outcome.
 
 Prespecified checks emitted by the runner:
 
-1. Fit a separate general-imagery mean model and a visual-minus-nonvisual deviation model; these represent distinct estimands, not competing parameterizations of a visual coefficient.
+1. Fit the separate general-imagery mean model and report the two prespecified linear contrasts from the direct model: common imagery shift and visual-minus-nonvisual coefficient contrast.
 2. Restrict to the paper's stated 18–30 age band; missing age is excluded from this sensitivity only.
 3. Fit the Study 2 NDD outcome separately, using `isneurodev`, which combines diagnosed and strongly suspected NDD. Do not label this autism or formal diagnosis.
-4. Use Firth bias-reduced logistic regression if ordinary logistic regression separates because a rare sex/gender level has no treatment events; diagnostics mark the estimator and its model-based interval.
+4. The ordinary logistic path uses a statsmodels-compatible White score sandwich; use Firth bias-reduced logistic regression if it separates because a rare sex/gender level has no treatment events. Diagnostics mark the estimator and its interval method.
 
 No outcome imputation, modality-by-modality p-value fishing, or unqualified cross-study pooled treatment claim is made. The pooled interaction model is an explicit test of study-by-imagery effect modification. Study 2 has a missing age value, so its primary complete-case N is 1,002; the diagnostics state exact counts for every model.
 

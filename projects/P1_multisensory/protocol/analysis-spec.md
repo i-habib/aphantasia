@@ -10,9 +10,13 @@ Source: New et al. (2026), OSF 2bdn6. Apply `nbact >= 3`; the contract requires 
 
 ## Working estimand and model
 
-For each study, fit a logistic model for source field `diag` using within-study z-scores for direct visual imagery and the common nonvisual modalities (sound, touch, motor, taste, smell, emotion, voice), age, and recorded sex/gender categories. The working effects are adjusted odds ratios and 95% intervals per within-study SD, not prevalence ratios and not causal effects. Secondary models use an all-modality mean composite and a visual-minus-nonvisual deviation conditional on that composite. The visual residual form is algebraically equivalent to the direct two-predictor model for the visual coefficient; it is not treated as a competing visual sensitivity.
+For each study, fit a logistic model for source field `diag` using within-study z-scores for direct visual imagery and the common nonvisual modalities (sound, touch, motor, taste, smell, emotion, voice), age, and recorded sex/gender categories. Average the modality z-scores into the nonvisual and all-modality composites, then re-standardize each completed composite within study. The working effects are adjusted odds ratios and 95% intervals per predictor SD, not prevalence ratios and not causal effects. A separate general-imagery mean model is genuinely distinct. Common-imagery-shift and visual-minus-nonvisual coefficient contrasts are computed from the direct visual + nonvisual model; no general-plus-deviation regression is treated as independent robustness evidence.
 
-Sensitivity checks: restriction to age 18–30 with missing ages excluded; Study 2 `isneurodev` outcome; and an explicit pooled study-by-imagery interaction. Use Firth bias-reduced logistic regression when ordinary logistic regression is singular/separated. Do not change predictor coding to chase agreement.
+Sensitivity checks: restriction to age 18–30 with missing ages excluded; Study 2 `isneurodev` outcome; and an explicit pooled study-by-imagery interaction. The ordinary logistic path uses the statsmodels-compatible White score sandwich; use Firth bias-reduced logistic regression when ordinary logistic regression is singular/separated. Do not change predictor coding to chase agreement.
+
+### Exploratory threshold-versus-dose-response comparison
+
+The source analysis script defines visual aphantasia as `image == 5` and visual hyperphantasia as `image >= 35`. The runner therefore fits a secondary categorical model with those two indicators and the middle visual range as the reference, conditional on the re-standardized nonvisual composite, age, and sex/gender. This asks whether the published extreme-phenotype framing adds information beyond a smooth continuous dose-response. It is exploratory because the public script and outcomes were inspected before this comparison was specified. Do not call the categorical model a causal threshold or select cut points from the observed treatment association.
 
 ## Required pre-manuscript checks
 

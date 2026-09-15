@@ -15,6 +15,10 @@ The user reports having emailed the author for the separate Dance autism-study d
 
 The current code reanalyses score arrays embedded in the authors' published analysis script and writes aggregate estimates only. AQ/CATI trait models are restricted to the diagnosed group because those questionnaires are absent from the controls. The public workbook's exact correspondence to these analysis arrays has not been verified. Controls came from an earlier sample; identify its source and check participant overlap before comparing or synthesizing results.
 
+The repeated-modality result is stress-tested with modality-standardized outcomes, age-by-modality and sex-by-modality nuisance interactions, and a no-smell specification. These are robustness diagnostics for the one-dataset anchor, not independent cohorts.
+
+The open provenance questions and stop gate are recorded in [`protocol/provenance-audit.md`](protocol/provenance-audit.md).
+
 Do not describe this single-cohort reanalysis as a new autism–aphantasia association paper. The publishable version needs a clearly new question, reliable measurement harmonization, independent eligible cohorts, overlap handling, and a registered study-level synthesis plan. Keep diagnosis contrasts separate from AQ/CATI trait associations.
 
 ## Finish checklist

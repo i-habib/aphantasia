@@ -1,0 +1,13 @@
+# Generated from the validated global user-site environment on 2026-09-14.
+# Install globally with: python3 -m pip install --user -r requirements-lock.txt
+numpy==2.4.6
+pandas==2.3.3
+scipy==1.18.0
+pytest==9.1.1
+statsmodels==0.14.5
+patsy==1.0.3
+packaging==26.2
+python-dateutil==2.9.0.post0
+pytz==2025.2
+six==1.17.0
+tzdata==2025.3

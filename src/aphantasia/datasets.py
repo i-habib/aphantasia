@@ -84,18 +84,21 @@ def load_new_studies(path: Path) -> tuple[pd.DataFrame, dict[str, Any]]:
 
             for modality in modalities:
                 retained[f"z_{modality}"] = _zscore(retained[modality])
-            retained["nonvisual_z"] = retained[[f"z_{name}" for name in COMMON_NONVISUAL]].mean(axis=1)
-            # Two prespecified, interpretable coordinate systems are retained:
-            # an all-modality general-imagery composite and a visual deviation
-            # from the participant's nonvisual profile. These are distinct
-            # questions from the direct visual + nonvisual model, not competing
-            # algebraic sensitivity parameterizations.
+            nonvisual_component_mean = retained[[f"z_{name}" for name in COMMON_NONVISUAL]].mean(axis=1)
+            # Standardize completed composites within study so every reported
+            # composite effect is per one composite SD, like visual_z.
+            retained["nonvisual_z"] = _zscore(nonvisual_component_mean)
             z_modalities = [f"z_{name}" for name in modalities]
-            retained["general_z"] = retained[z_modalities].mean(axis=1)
-            retained["visual_deviation"] = retained["z_image"] - retained["nonvisual_z"]
+            general_component_mean = retained[z_modalities].mean(axis=1)
+            retained["general_z"] = _zscore(general_component_mean)
+            # Preserve the source script's visual extreme-phenotype cut points
+            # for the exploratory threshold-versus-dose-response comparison.
+            image_present = retained["image"].notna()
+            retained["visual_aphantasia"] = np.where(image_present, (retained["image"] == 5).astype(float), np.nan)
+            retained["visual_hyperphantasia"] = np.where(image_present, (retained["image"] >= 35).astype(float), np.nan)
 
             # The analyst frame contains no source IDs, open answers, or comments.
-            analysis_columns = ["diag", "nonvisual_z", "z_image", "general_z", "visual_deviation", "age", "sex"]
+            analysis_columns = ["diag", "nonvisual_z", "z_image", "general_z", "visual_aphantasia", "visual_hyperphantasia", "age", "sex"]
             if study == 2:
                 analysis_columns.append("isneurodev")
             analysis = retained[analysis_columns].copy()
