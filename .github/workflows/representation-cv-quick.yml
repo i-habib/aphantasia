@@ -1,0 +1,32 @@
+name: Representation CV Quick
+
+on:
+  push:
+    branches: [analysis/representation-cv]
+  workflow_dispatch:
+
+jobs:
+  quick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e . scikit-learn
+      - name: Fetch New public data
+        run: |
+          mkdir -p /tmp/aphantasia-public
+          python scripts/fetch_public.py --source new2026 --output-root /tmp/aphantasia-public --download
+      - name: Run quick OOF comparison
+        run: python scripts/representation_cv_quick.py --data-root /tmp/aphantasia-public --output quick_results
+      - name: Remove participant-level data
+        if: always()
+        run: rm -rf /tmp/aphantasia-public
+      - name: Upload aggregate results
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: representation-cv-quick-results
+          path: quick_results/
