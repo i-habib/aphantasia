@@ -25,22 +25,20 @@ jobs:
           print('scipy', scipy.__version__)
           print('sklearn', sklearn.__version__)
           PY
-      - name: Fetch public source data to ephemeral runner storage
+      - name: Fetch New et al. public data to ephemeral runner storage
         run: |
           mkdir -p /tmp/aphantasia-public
           python scripts/fetch_public.py --source new2026 --output-root /tmp/aphantasia-public --download
-          python scripts/fetch_public.py --source arnold2026 --output-root /tmp/aphantasia-public --download
           python - <<'PY'
           import json
           from pathlib import Path
-          for name in ('new2026','arnold2026'):
-              p=Path('/tmp/aphantasia-public/manifests')/f'{name}.json'
-              d=json.loads(p.read_text())
-              print(name, d['status'], [(x['name'], x['status'], x.get('size')) for x in d['files']])
+          p=Path('/tmp/aphantasia-public/manifests/new2026.json')
+          d=json.loads(p.read_text())
+          print('new2026', d['status'], [(x['name'], x['status'], x.get('size')) for x in d['files']])
           PY
       - name: Run nested repeated CV
         run: |
-          python scripts/representation_cv.py \
+          python scripts/representation_cv_p1.py \
             --data-root /tmp/aphantasia-public \
             --output representation_cv_results \
             --outer-repeats 20
