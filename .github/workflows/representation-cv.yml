@@ -41,7 +41,7 @@ jobs:
           python scripts/representation_cv_p1.py \
             --data-root /tmp/aphantasia-public \
             --output representation_cv_results \
-            --outer-repeats 20
+            --outer-repeats 5
       - name: Remove public participant-level source files
         if: always()
         run: rm -rf /tmp/aphantasia-public
