@@ -1,0 +1,59 @@
+name: Representation CV
+
+on:
+  push:
+    branches: [analysis/representation-cv]
+  workflow_dispatch:
+
+jobs:
+  representation-cv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install analysis dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . scikit-learn
+          python - <<'PY'
+          import numpy, pandas, scipy, sklearn
+          print('numpy', numpy.__version__)
+          print('pandas', pandas.__version__)
+          print('scipy', scipy.__version__)
+          print('sklearn', sklearn.__version__)
+          PY
+      - name: Fetch public source data to ephemeral runner storage
+        run: |
+          mkdir -p /tmp/aphantasia-public
+          python scripts/fetch_public.py --source new2026 --output-root /tmp/aphantasia-public --download
+          python scripts/fetch_public.py --source arnold2026 --output-root /tmp/aphantasia-public --download
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for name in ('new2026','arnold2026'):
+              p=Path('/tmp/aphantasia-public/manifests')/f'{name}.json'
+              d=json.loads(p.read_text())
+              print(name, d['status'], [(x['name'], x['status'], x.get('size')) for x in d['files']])
+          PY
+      - name: Run nested repeated CV
+        run: |
+          python scripts/representation_cv.py \
+            --data-root /tmp/aphantasia-public \
+            --output representation_cv_results \
+            --outer-repeats 20
+      - name: Remove public participant-level source files
+        if: always()
+        run: rm -rf /tmp/aphantasia-public
+      - name: Print aggregate result
+        if: success()
+        run: cat representation_cv_results/representation_cv.md
+      - name: Upload aggregate-only results
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: representation-cv-results
+          path: representation_cv_results/
+          if-no-files-found: error
