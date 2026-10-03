@@ -132,6 +132,80 @@ def load_new_studies(path: Path) -> tuple[pd.DataFrame, dict[str, Any]]:
     return pd.concat(rows, ignore_index=True), flow
 
 
+# P5 crosswalk from New Study 2 source fields to the Arnold modality names.
+# The six shared modalities form the primary composite; the remaining Study 2
+# scales are exploratory because Arnold's arrays have no counterpart.
+NEW_STUDY2_PRIMARY = {"visual": "image", "auditory": "sound", "smell": "smell", "taste": "taste", "touch": "touch", "movement": "motor"}
+NEW_STUDY2_EXPLORATORY = {"emotion": "emotion", "voice": "voice", "interoception": "intstate"}
+NDD_CHECKLIST = {"ASD", "ADHD", "Dyslexia", "Dyscalculia", "Dysgraphia", "Dyspraxia", "Language Disorder"}
+
+
+def classify_ndd_conditions(isneurodev: pd.Series, neurodev2: pd.Series) -> pd.DataFrame:
+    """Map the Study 2 NDD gate item and its checklist to P5 analysis groups.
+
+    ``isneurodev`` answers "Have you ever been diagnosed with, or strongly
+    suspected to have, a neurodevelopmental disorder...?"; ``neurodev2`` is the
+    comma-separated multi-select follow-up. Groups are mutually exclusive:
+    ``asd`` (ASD ticked, with or without ADHD), ``adhd_only``, ``other_ndd_only``,
+    ``unspecified_ndd`` (gate Yes with no condition ticked) and ``reference``.
+    """
+    gate = pd.to_numeric(isneurodev, errors="coerce")
+    tokens = neurodev2.astype("string").fillna("").map(lambda text: {part.strip() for part in text.split(",") if part.strip()})
+    if gate.isna().any() or not set(gate.unique()).issubset({0, 1}):
+        raise DatasetError("isneurodev must be an explicit 0/1 response for every retained row.")
+    if (gate.eq(0) & tokens.map(bool)).any():
+        raise DatasetError("A participant answering No to the NDD gate has checklist conditions.")
+    asd = tokens.map(lambda chosen: "ASD" in chosen)
+    adhd = tokens.map(lambda chosen: "ADHD" in chosen)
+    group = pd.Series("reference", index=gate.index, dtype="object")
+    group[gate.eq(1) & ~tokens.map(bool)] = "unspecified_ndd"
+    group[gate.eq(1) & tokens.map(bool)] = "other_ndd_only"
+    group[adhd & ~asd] = "adhd_only"
+    group[asd] = "asd"
+    unlisted = tokens.map(lambda chosen: len(chosen - NDD_CHECKLIST)).gt(0)
+    return pd.DataFrame({"group": group, "asd_with_adhd": (asd & adhd), "unlisted_condition_text": unlisted})
+
+
+def load_new_study2_conditions(path: Path) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Read New Study 2 for P5: condition groups, imagery scores, age and sex.
+
+    Applies the published ``nbact >= 3`` rule. The returned frame contains no
+    source IDs, comments, or checklist free text.
+    """
+    with zipfile.ZipFile(path) as archive, archive.open(NEW_MEMBERS[2]) as stream:
+        source = pd.read_csv(stream, sep="\t", dtype="string", keep_default_na=False, encoding="cp1252")
+    retained = source.loc[pd.to_numeric(source["nbact"], errors="coerce").ge(3)].copy()
+    if len(retained) != NEW_PUBLISHED_N[2]:
+        raise DatasetError(f"Study 2 retained N={len(retained)} after nbact >= 3; expected published N={NEW_PUBLISHED_N[2]}.")
+    source_scores = {**NEW_STUDY2_PRIMARY, **NEW_STUDY2_EXPLORATORY}
+    _numeric(retained, [*source_scores.values(), "age", "isneurodev"])
+    for field in source_scores.values():
+        observed = retained[field].dropna()
+        if (observed < 5).any() or (observed > 35).any():
+            raise DatasetError(f"Study 2 {field} score falls outside the declared 5–35 range.")
+    groups = classify_ndd_conditions(retained["isneurodev"], retained["neurodev2"].replace("", pd.NA))
+    frame = pd.DataFrame({name: retained[field].to_numpy() for name, field in source_scores.items()})
+    frame["age"] = retained["age"].to_numpy()
+    frame["sex_gender"] = retained["sex"].astype("string").str.strip().to_numpy()
+    for column in groups.columns:
+        frame[column] = groups[column].to_numpy()
+    counts = frame["group"].value_counts()
+    flow = {
+        "source": "New et al. (2026) Study 2, OSF 2bdn6, Analyses/Exp3.1020.txt",
+        "source_rows": int(len(source)),
+        "published_analysis_n": int(len(retained)),
+        "group_counts": {name: int(counts.get(name, 0)) for name in ("reference", "asd", "adhd_only", "other_ndd_only", "unspecified_ndd")},
+        "asd_with_adhd": int(frame["asd_with_adhd"].sum()),
+        "asd_without_adhd": int((frame["group"].eq("asd") & ~frame["asd_with_adhd"]).sum()),
+        "unlisted_condition_text": int(frame["unlisted_condition_text"].sum()),
+        "age_missing": int(pd.to_numeric(frame["age"], errors="coerce").isna().sum()),
+        "gate_item": "Have you ever been diagnosed with, or strongly suspected to have, a neurodevelopmental disorder such as ASD, ADHD, or a learning disability?",
+        "checklist_item": "Which one(s)? (multi-select: ASD, ADHD, Dyslexia, Dyscalculia, Dysgraphia, Language Disorder, Dyspraxia, Other)",
+        "modality_crosswalk": {**NEW_STUDY2_PRIMARY, **NEW_STUDY2_EXPLORATORY},
+    }
+    return frame.drop(columns=["unlisted_condition_text"]), flow
+
+
 _MATLAB_BLOCK = re.compile(r"(?ms)^\s*([A-Za-z_]\w*)\s*=\s*\[(.*?)\]\s*;")
 _MATLAB_NUMBER = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
 

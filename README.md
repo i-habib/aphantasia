@@ -1,6 +1,6 @@
 # Aphantasia association research programme
 
-This repository contains reproducible scaffolding and aggregate-only first-pass analyses for public aphantasia datasets. The active priority is **P3 (autism and imagery)**, followed by **P1 (multisensory imagery and reported treatment)**. **P2 (NZAVS)** is access-dependent and **P4 (therapy modality matching)** is stopped because the public file lacks a linked modality-specific outcome.
+This repository contains reproducible scaffolding and aggregate-only first-pass analyses for public aphantasia datasets. **P5 (autism/ADHD multisensory imagery, a preregistered test of Arnold et al. 2026 in New et al. Study 2)** is drafted and locked until registration; see [`projects/P5_asd_adhd_replication/`](projects/P5_asd_adhd_replication/README.md). Among the exploratory projects, the priority is **P3 (autism and imagery)**, followed by **P1 (multisensory imagery and reported treatment)**. **P2 (NZAVS)** is access-dependent and **P4 (therapy modality matching)** is stopped because the public file lacks a linked modality-specific outcome.
 
 ## Run the available analyses
 
