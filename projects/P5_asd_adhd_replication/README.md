@@ -1,6 +1,6 @@
 # P5 — autism, ADHD and multisensory imagery: a preregistered test of Arnold et al. (2026)
 
-**State:** preregistration drafted; confirmatory analysis locked until the plan is registered and frozen. No autism- or ADHD-specific imagery comparison has been computed.
+**State:** registered on OSF 10 Oct 2026 (https://osf.io/87udm, embargoed until 24 Nov 2026), plan frozen, registered analysis run once. Exploratory follow-ups added afterwards are listed below.
 
 - Plan: [`protocol/preregistration.md`](protocol/preregistration.md) · deviations: [`protocol/deviations.md`](protocol/deviations.md)
 - Data: New et al. (2026) Study 2 (OSF 2bdn6). The `neurodev2` checklist identifies ASD (n=150), ADHD-only (n=84) and other conditions (n=20) among 1,003 participants; the source paper analysed only the pooled indicator.
@@ -27,4 +27,22 @@ python3 scripts/run_available.py --project P5 --preregistration-url https://osf.
 - [ ] Run `python3 scripts/freeze_preregistration.py --project P5` on the uploaded text.
 - [ ] Run the analysis **once**: `python3 scripts/run_available.py --project P5 --preregistration-url <URL>`.
 
-**OSF draft (private, not registered):** https://osf.io/registries/drafts/6abc78217bf6140b0157b646/review. See `projects/osf_drafts/README.md`.
+**Registration:** https://osf.io/87udm. Draft records are in `projects/osf_drafts/`.
+
+## Exploratory follow-ups (not in the registered plan)
+
+Added 10 Oct 2026, after the registered results were seen. Report them as exploratory.
+
+```sh
+python3 scripts/p5_exploratory.py --preregistration-url https://osf.io/87udm   # New et al. + Arnold et al.
+python3 scripts/p5_dance_traits.py                                             # Dance, Ward & Simner (2021); needs pyreadstat
+```
+
+- E1 answering style: floor and top-score rates per sense, in both studies.
+- E2 H1 among people who passed every attention check.
+- E3 where the gap sits: H1 among people with some imagery in all six senses; percentile differences (both studies).
+- E4 emotion, voice and inner-body imagery (New et al. only).
+- E5 H1 adjusted for current treatment and education.
+- E6 the empathy item, and H1 adjusted for it.
+- Autism vs ADHD on having no imagery in at least one sense.
+- Dance et al.: AQ vs imagery within people with and without aphantasia.
