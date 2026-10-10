@@ -3,7 +3,7 @@
 This is the full analysis plan. It is registered on OSF (Secondary Data Preregistration template), and the registration quotes this file's SHA-256 fingerprint. The analysis code checks the fingerprint and will not run if this file has changed.
 
 - **Author:** Ivan Habib (ORCID https://orcid.org/0009-0002-7812-0371)
-- **Drafted:** 29 September 2026; revised 1 and 9 October 2026
+- **Drafted:** 29 September 2026; revised 1–10 October 2026
 - **Registration:** on OSF under Ivan Habib's account; the registration's statistical-models answer quotes this file's SHA-256.
 - **Code:** https://github.com/i-habib/aphantasia, file `src/aphantasia/p7.py`. Run with `python3 scripts/run_available.py --project P7 --preregistration-url <URL>`.
 
@@ -11,9 +11,9 @@ This is the full analysis plan. It is registered on OSF (Secondary Data Preregis
 
 ## 1. Background
 
-A review of 27 brain-imaging studies (Spagna et al., 2021) found that visual imagery reliably activates a small area of the left fusiform gyrus, the *fusiform imagery node* (FIN), along with areas in the left parietal and frontal lobes. In people with lifelong aphantasia, the FIN still responds during imagery, but it is less connected to left frontal areas, especially dorsal premotor and prefrontal cortex (Liu et al., 2025; 10 people with aphantasia and 10 without). Brain injuries that cause aphantasia occur in areas connected to the FIN (Kutsche et al., 2025/2026).
+A review of 27 brain-imaging studies (Spagna et al., 2021) found that visual imagery reliably activates a small area of the left fusiform gyrus, the *fusiform imagery node* (FIN), along with areas in the left parietal and frontal lobes. In people with lifelong aphantasia, the FIN still responds during imagery, but it is less connected to left frontal areas, especially dorsal premotor and prefrontal cortex (Liu et al., 2025; 10 people with aphantasia and 10 without). Brain injuries that cause aphantasia occur in areas connected to the FIN (Kutsche et al., 2026).
 
-Autistic adults report weaker imagery on average (King et al., 2024; Arnold et al., 2026; Taylor et al., 2026), and autism has long been linked to differences in long-range brain connections. Kutsche et al. suggested the two might be related, but we found no study that tested it.
+Autistic adults report weaker imagery on average (King et al., 2024; Arnold et al., 2026; Taylor et al., 2026), and autism has long been linked to differences in long-range brain connections (Just et al., 2004; Di Martino et al., 2014). Kutsche et al. suggested the two might be related, but we found no study that tested it.
 
 We use resting-state brain scans from ABIDE I to ask:
 
@@ -147,10 +147,11 @@ These are exploratory, and we draw no firm conclusions from them.
 |---|---|
 | H1 and H2 both show weaker connectivity, with confidence intervals that exclude zero | The FIN is less connected to the imagery areas in autism, beyond any general difference. This fits the idea that autistic brains share aphantasia's connection pattern. |
 | H1 shows weaker connectivity, but H2's interval includes zero | The FIN is less connected, but no more than to the rest of the brain. This points to a general difference rather than one specific to imagery. |
-| H1's interval includes zero | No sign of the aphantasia pattern. We then test whether we can rule out differences as large as 0.15 SD, using an equivalence test (two one-sided tests). |
+| H1's interval includes zero, and an equivalence test (two one-sided tests) rules out differences as large as 0.15 SD | Any difference is too small to matter. |
+| H1's interval includes zero, but the equivalence test does not rule out 0.15 SD | Inconclusive. |
 | H1 shows stronger connectivity | This counts against the idea. |
 
-We treat a standardized difference of 0.15 as the smallest that matters. This is smaller than the autism versus non-autism differences usually reported in ABIDE.
+We treat a standardized difference of 0.15 as the smallest that matters. This is our own judgement of a difference worth detecting, not a value taken from earlier studies.
 
 ## 8. Power
 
