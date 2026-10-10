@@ -1,10 +1,10 @@
 # Autism and weaker multisensory imagery: testing Arnold et al. (2026) in an independent sample, with ADHD for comparison
 
-**Status: draft, not yet registered.** This is the full analysis plan. It will be registered on OSF (Secondary Data Preregistration template), and its SHA-256 fingerprint will be recorded at that point. The analysis code checks the fingerprint and will not run if this file has changed since.
+This is the full analysis plan. It is registered on OSF (Secondary Data Preregistration template), and the registration quotes this file's SHA-256 fingerprint. The analysis code checks the fingerprint and will not run if this file has changed.
 
-- **Author:** Ivan Habib [affiliation and ORCID to add]
-- **Drafted:** 27 September 2026; revised 1 October 2026
-- **Registration:** [OSF link, added on registration]
+- **Author:** Ivan Habib (ORCID https://orcid.org/0009-0002-7812-0371)
+- **Drafted:** 27 September 2026; revised 1 and 9 October 2026
+- **Registration:** on OSF under Ivan Habib's account; the registration's statistical-models answer quotes this file's SHA-256.
 - **Code:** https://github.com/i-habib/aphantasia, file `src/aphantasia/p5.py`. Run with `python3 scripts/run_available.py --project P5 --preregistration-url <URL>`.
 
 ---

@@ -4,8 +4,8 @@ Both drafts use OSF's *Secondary Data Preregistration* template. They were creat
 
 | Project | Draft (review page) | Plan file SHA-256 quoted in the draft |
 |---|---|---|
-| P5 | https://osf.io/registries/drafts/6abc78217bf6140b0157b646/review | `8a90ff1edef1573660b29e90666d1e8eae8f369cab70b2a9cdec97a9c0d57635` |
-| P7 | https://osf.io/registries/drafts/6abc7b03e6c491a5f6b5f205/review | `337b7efe5f70b3f756950d5ea9d2005bfb88b724401217671191658e55e34e7c` |
+| P5 | https://osf.io/registries/drafts/6abc78217bf6140b0157b646/review | `18202a92002326c904aecfb369e3dd27dfca3b2d1382b045d250bea4f9157928` |
+| P7 | https://osf.io/registries/drafts/6abc7b03e6c491a5f6b5f205/review | `7c077ebc698825bd516ff69ee99296b4434c518964b1346a73fa3bb10d04a6bd` |
 
 `p5_osf_responses.json` / `p7_osf_responses.json` hold the exact answers (OSF field keys 72-2 … 72-61).
 
