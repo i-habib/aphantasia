@@ -31,4 +31,4 @@ def run_p8(root: Path, output_dir: Path, *, registration: Registration) -> dict[
     if completed.returncode != 0:
         raise AnalysisStop("blocked", "r_failed", (completed.stderr or last)[-2000:])
     summary = json.loads(last)["P8"]
-    return {**summary, "project": "P8", "artifacts": [str(output_dir / "p8_results.json"), str(output_dir / "graphs_main.png")]}
+    return {**summary, "project": "P8", "artifacts": [str(output_dir / "p8_results.json"), str(output_dir / "graphs_main.pdf")]}

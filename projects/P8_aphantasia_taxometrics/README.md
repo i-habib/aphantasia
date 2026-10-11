@@ -23,7 +23,7 @@ Needs R 4.5 or later with `RTaxometrics` 3.2.1 and `jsonlite`.
 
 ## Next
 
-- [ ] Run once: `python3 scripts/run_available.py --project P8 --preregistration-url https://osf.io/w8xj9` (several hours).
+- [ ] Run once, on Modal: `modal run --detach scripts/p8_modal.py --preregistration-url https://osf.io/w8xj9`, then `modal volume get aphantasia-p8-results latest runs/latest/P8_modal`. (Locally: `python3 scripts/run_available.py --project P8 --preregistration-url https://osf.io/w8xj9`.)
 - [ ] Cite the Aphantasia Network dataset (Monzel et al. 2026); consider telling the authors.
 
 OSF answers: `projects/osf_drafts/p8_osf_responses.json` (draft 6acbb5a7559cf343cd2674f5).

@@ -4,3 +4,4 @@ Record every departure from the frozen `preregistration.md` here. Do not edit th
 
 | Date | Section | Change | Reason | Results seen before change? | Effect on conclusions |
 |---|---|---|---|---|---|
+| 2026-10-11 | §5, §9 | How the code runs, not what it computes. The independent analyses now run in parallel (R `parallel::mclapply`), in two batches: the detectability check and the profile-size check wait for the results they need. The run is on one Modal cloud machine (16 CPUs, Docker image `rocker/r-ver:4.6.1`, RTaxometrics 3.2.1) instead of the laptop. | Running one analysis at a time would take 8+ hours on one core. | No. A sequential local run was started and stopped before it wrote any results. | None. Every analysis sets its own seeds, so the results are the same as running them in turn. |

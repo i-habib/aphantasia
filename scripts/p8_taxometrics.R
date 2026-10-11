@@ -6,6 +6,7 @@
 # Self-test on simulated data only (no real data are read):
 #   Rscript scripts/p8_taxometrics.R --selftest          # helpers only, seconds
 #   Rscript scripts/p8_taxometrics.R --selftest --full   # also taxometric runs, about 6 minutes
+#   Rscript scripts/p8_taxometrics.R --selftest --pipeline  # whole pipeline, small settings, parallel
 #
 # Writes summary results and graphs only, never individual rows.
 
@@ -210,7 +211,10 @@ combined_verdict <- function(main_ccfi, profile_ccfi) {
 run_profile <- function(x, n.samples = 100, num.p = 39) {
   set.seed(SEED)
   use <- if (nrow(x) > PROFILE_MAX_N) x[sample.int(nrow(x), PROFILE_MAX_N), , drop = FALSE] else x
+  old_device <- options(device = function(...) pdf(NULL))
   profile <- RunCCFIProfile(use, seed = SEED, n.samples = n.samples, num.p = num.p, graph = 0)
+  while (dev.cur() > 1) dev.off()
+  options(old_device)
   list(n_used = nrow(use), ccfi = profile$CCFI.mean, base_rate = profile$p.mean,
        ccfi_by_procedure = list(MAMBAC = profile$CCFI.MAMBAC, MAXEIG = profile$CCFI.MAXEIG, LMode = profile$CCFI.LMode),
        base_rate_by_procedure = list(MAMBAC = profile$p.MAMBAC, MAXEIG = profile$p.MAXEIG, LMode = profile$p.LMode))
@@ -239,9 +243,11 @@ analyse <- function(x, label, p, out_dir, with_profile = FALSE, graph_file = NUL
   })
   taxon_r <- within_correlations(x, groups == 2)
   rest_r <- within_correlations(x, groups == 1)
-  if (!is.null(graph_file)) png(graph_file, width = 2400, height = 1600, res = 200) else pdf(NULL)
+  # The package opens its own graphics device, so point R's default device at the file we want (or at nothing).
+  old_device <- options(device = if (is.null(graph_file)) function(...) pdf(NULL) else function(...) pdf(graph_file, width = 12, height = 8))
   result <- RunTaxometrics(grouped, seed = SEED, n.samples = n.samples, graph = if (is.null(graph_file)) 0 else 1)
-  dev.off()
+  while (dev.cur() > 1) dev.off()
+  options(old_device)
   by_procedure <- c(result$CCFI.MAMBAC, result$CCFI.MAXEIG, result$CCFI.LMode)
   out <- list(label = label, n = nrow(x), indicators = colnames(x), status = "run",
               requested_taxon_share = p, actual_taxon_share = mean(groups == 2),
@@ -290,62 +296,112 @@ conclude <- function(results) {
 
 # ---- full registered run ----
 
-run_p8 <- function(root, out_dir, registration) {
+run_tasks <- function(tasks, cores) {
+  # Each analysis sets its own seeds, so running them in parallel gives the same results as running them in turn.
+  out <- parallel::mclapply(tasks, function(task) task(), mc.cores = max(1, min(cores, length(tasks))),
+                            mc.preschedule = FALSE, mc.set.seed = FALSE)
+  failed <- vapply(out, function(x) inherits(x, "try-error") || is.null(x), logical(1))
+  if (any(failed)) stop(sprintf("analysis failed: %s\n%s", paste(names(tasks)[failed], collapse = ", "),
+                                paste(vapply(out[failed], function(x) paste(as.character(x), collapse = " "), ""), collapse = "\n")))
+  out
+}
+
+# Builds and runs every analysis in plan sections 5.2-5.5; returns the results list without run metadata.
+run_analyses <- function(monzel_items, dance_items, new, out_dir, cores, n.samples = 100, num.p = 39) {
+  main_x <- scene_indicators(monzel_items)
+  p32 <- share_at_or_below(monzel_items, 32)
+  matched <- matched_subsample(monzel_items, dance_items)
+  matched_items <- monzel_items[matched$rows, , drop = FALSE]
+  set.seed(SEED)
+  half <- sample(rep(1:2, length.out = nrow(main_x)))
+  run <- function(...) analyse(..., n.samples = n.samples, num.p = num.p)
+  first <- run_tasks(list(
+    main = function() run(main_x, "main_scenes", p32, out_dir, with_profile = TRUE, graph_file = file.path(out_dir, "graphs_main.pdf")),
+    matched = function() run(main_x[matched$rows, ], "matched_scenes", share_at_or_below(matched_items, 32), out_dir, with_profile = TRUE),
+    item_pairs = function() run(pair_indicators(monzel_items), "main_pairs", p32, out_dir),
+    cutoff_23 = function() run(main_x, "main_cut23", share_at_or_below(monzel_items, 23), out_dir),
+    half_1 = function() run(main_x[half == 1, ], "half_1", share_at_or_below(monzel_items[half == 1, ], 32), out_dir),
+    half_2 = function() run(main_x[half == 2, ], "half_2", share_at_or_below(monzel_items[half == 2, ], 32), out_dir),
+    floored = function() {
+      floored <- simulate_floored_continuum(monzel_items)
+      c(list(loading = floored$loading, target_mean_r = floored$target_mean_r, achieved_mean_r = floored$achieved_mean_r,
+             floor = floor_summary(floored$items)),
+        run(scene_indicators(floored$items), "floored_continuum", share_at_or_below(floored$items, 32), out_dir, with_profile = TRUE))
+    },
+    dance = function() run(scene_indicators(dance_items), "dance_scenes", share_at_or_below(dance_items, 32), out_dir, with_profile = TRUE),
+    multisensory = function() run(-new$senses, "new_multisensory", mean(new$n_floor >= 4), out_dir, with_profile = TRUE)
+  ), cores)
+  second <- list()
+  if (identical(first$matched$status, "run")) {
+    taxon_r <- first$matched$checks$within_r_taxon$mean
+    rest_r <- first$matched$checks$within_r_rest$mean
+    second$matched_detectability <- function() {
+      sim <- simulate_detectable_taxon(matched$n, first$matched$actual_taxon_share, first$matched$checks$mean_validity_d,
+                                       ifelse(is.na(taxon_r), 0, taxon_r), ifelse(is.na(rest_r), 0, rest_r))
+      run(sim, "matched_detectability", first$matched$actual_taxon_share, out_dir, with_profile = TRUE)
+    }
+  }
+  if (isTRUE(first$main$profile$ccfi >= CCFI_TAXONIC)) {
+    second$profile_size <- function() run(main_x, "main_profile_size", first$main$profile$base_rate, out_dir)
+  }
+  second <- if (length(second)) run_tasks(second, cores) else list()
+  results <- list(main = first$main)
+  results$robustness <- list(
+    matched_subsample = c(list(n = matched$n, band_target = matched$target, band_achieved = matched$achieved,
+                               floor = floor_summary(matched_items)), first$matched),
+    matched_detectability = second$matched_detectability,
+    item_pairs = first$item_pairs, cutoff_23 = first$cutoff_23, profile_size = second$profile_size,
+    half_1 = first$half_1, half_2 = first$half_2, floored_continuum = first$floored)
+  results$robustness <- results$robustness[!vapply(results$robustness, is.null, logical(1))]
+  results$secondary <- list(dance = first$dance, multisensory = first$multisensory)
+  results$conclusion <- conclude(results)
+  results
+}
+
+run_p8 <- function(root, out_dir, registration, cores = parallel::detectCores()) {
   plan_sha <- verify_registration(root, registration)
   verify_data(root)
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   monzel <- load_monzel(root)
   dance <- load_dance(root)
   new <- load_new(root)
-  results <- list(project = "P8", registration = registration, plan_sha256 = plan_sha, seed = SEED,
-                  rtaxometrics = as.character(packageVersion("RTaxometrics")), r = R.version.string,
-                  flow = list(monzel = monzel$flow, dance = dance$flow, new = new$flow),
-                  floor = list(main = floor_summary(monzel$items), dance = floor_summary(dance$items)))
-  main_x <- scene_indicators(monzel$items)
-  p32 <- share_at_or_below(monzel$items, 32)
-  results$main <- analyse(main_x, "main_scenes", p32, out_dir, with_profile = TRUE,
-                          graph_file = file.path(out_dir, "graphs_main.png"))
-
-  matched <- matched_subsample(monzel$items, dance$items)
-  matched_items <- monzel$items[matched$rows, , drop = FALSE]
-  matched_result <- analyse(main_x[matched$rows, ], "matched_scenes", share_at_or_below(matched_items, 32), out_dir, with_profile = TRUE)
-  results$robustness <- list(
-    matched_subsample = c(list(n = matched$n, band_target = matched$target, band_achieved = matched$achieved,
-                               floor = floor_summary(matched_items)), matched_result))
-  if (identical(matched_result$status, "run")) {
-    taxon_r <- matched_result$checks$within_r_taxon$mean
-    rest_r <- matched_result$checks$within_r_rest$mean
-    sim <- simulate_detectable_taxon(matched$n, matched_result$actual_taxon_share, matched_result$checks$mean_validity_d,
-                                     ifelse(is.na(taxon_r), 0, taxon_r), ifelse(is.na(rest_r), 0, rest_r))
-    results$robustness$matched_detectability <- analyse(sim, "matched_detectability", matched_result$actual_taxon_share, out_dir,
-                                                        with_profile = TRUE)
-  }
-  results$robustness$item_pairs <- analyse(pair_indicators(monzel$items), "main_pairs", p32, out_dir)
-  results$robustness$cutoff_23 <- analyse(main_x, "main_cut23", share_at_or_below(monzel$items, 23), out_dir)
-  if (isTRUE(results$main$profile$ccfi >= CCFI_TAXONIC)) {
-    results$robustness$profile_size <- analyse(main_x, "main_profile_size", results$main$profile$base_rate, out_dir)
-  }
-  set.seed(SEED)
-  half <- sample(rep(1:2, length.out = nrow(main_x)))
-  results$robustness$half_1 <- analyse(main_x[half == 1, ], "half_1", share_at_or_below(monzel$items[half == 1, ], 32), out_dir)
-  results$robustness$half_2 <- analyse(main_x[half == 2, ], "half_2", share_at_or_below(monzel$items[half == 2, ], 32), out_dir)
-  floored <- simulate_floored_continuum(monzel$items)
-  results$robustness$floored_continuum <- c(list(loading = floored$loading, target_mean_r = floored$target_mean_r,
-                                                 achieved_mean_r = floored$achieved_mean_r, floor = floor_summary(floored$items)),
-                                            analyse(scene_indicators(floored$items), "floored_continuum",
-                                                    share_at_or_below(floored$items, 32), out_dir, with_profile = TRUE))
-
-  results$secondary <- list(
-    dance = analyse(scene_indicators(dance$items), "dance_scenes", share_at_or_below(dance$items, 32), out_dir, with_profile = TRUE),
-    multisensory = analyse(-new$senses, "new_multisensory", mean(new$n_floor >= 4), out_dir, with_profile = TRUE)
-  )
-  results$conclusion <- conclude(results)
+  results <- c(list(project = "P8", registration = registration, plan_sha256 = plan_sha, seed = SEED,
+                    rtaxometrics = as.character(packageVersion("RTaxometrics")), r = R.version.string, cores = cores,
+                    flow = list(monzel = monzel$flow, dance = dance$flow, new = new$flow),
+                    floor = list(main = floor_summary(monzel$items), dance = floor_summary(dance$items))),
+               run_analyses(monzel$items, dance$items, new, out_dir, cores))
   write_json(results, file.path(out_dir, "p8_results.json"), auto_unbox = TRUE, digits = 6, pretty = TRUE, na = "null")
   cat(toJSON(list(P8 = list(status = "complete", reading = results$conclusion$reading,
                             main_ccfi = results$main$ccfi$mean, profile_ccfi = results$main$profile$ccfi)), auto_unbox = TRUE), "\n")
 }
 
 # ---- self-test on simulated data (no real data) ----
+
+# The whole pipeline on simulated data, with small settings, to check the wiring (no real data).
+selftest_pipeline <- function(cores = 4) {
+  set.seed(2)
+  draw_items <- function(n, floor_share) {
+    latent <- rnorm(n)
+    items <- sapply(1:16, function(j) findInterval(0.8 * latent + 0.6 * rnorm(n), c(-1.2, -0.4, 0.4, 1.2)) + 1)
+    items[seq_len(round(n * floor_share)), ] <- 1L
+    items
+  }
+  monzel_items <- draw_items(3000, 0.15)
+  dance_items <- draw_items(600, 0.01)
+  senses <- matrix(rnorm(1200 * 8), ncol = 8)
+  new <- list(senses = senses, n_floor = c(rep(5L, 60), rep(0L, 1140)))
+  out_dir <- file.path(tempdir(), "p8_pipeline")
+  dir.create(out_dir, showWarnings = FALSE)
+  results <- run_analyses(monzel_items, dance_items, new, out_dir, cores, n.samples = 3, num.p = 20)
+  expected <- c("matched_subsample", "item_pairs", "cutoff_23", "half_1", "half_2", "floored_continuum")
+  out <- list(pipeline_keys_ok = all(expected %in% names(results$robustness)),
+              detectability_present = !is.null(results$robustness$matched_detectability) ||
+                !identical(results$robustness$matched_subsample$status, "run"),
+              secondary_ok = all(c("dance", "multisensory") %in% names(results$secondary)),
+              conclusion = results$conclusion$reading,
+              graph_written = isTRUE(file.info(file.path(out_dir, "graphs_main.pdf"))$size > 1000))
+  cat(toJSON(out, auto_unbox = TRUE), "\n")
+}
 
 selftest <- function(full = FALSE) {
   set.seed(1)
@@ -392,7 +448,9 @@ value_of <- function(flag) {
   i <- match(flag, args)
   if (is.na(i) || i == length(args)) NULL else args[i + 1]
 }
-if ("--selftest" %in% args) {
+if ("--selftest" %in% args && "--pipeline" %in% args) {
+  selftest_pipeline()
+} else if ("--selftest" %in% args) {
   selftest(full = "--full" %in% args)
 } else {
   root <- normalizePath(if (is.null(value_of("--root"))) "." else value_of("--root"))
