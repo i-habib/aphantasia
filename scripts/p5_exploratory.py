@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from scipy.stats import fisher_exact, norm, t
+from scipy.stats import fisher_exact, mannwhitneyu, norm, t
 from statsmodels.regression.quantile_regression import QuantReg
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -178,8 +178,24 @@ def main() -> int:
     out["E2_all_attention_checks_passed"] = _effect(pair.loc[pair["nbact"].eq(5)], "general_z")
 
     # E1 and E3 repeated in Arnold et al.'s data (scores 0-50, floor 0)
-    arnold, _, _, _ = load_arnold_code(ROOT / "Autism_Aphantasia_Analyses_code.zip")
+    arnold, arnold_aq26, arnold_traits, _ = load_arnold_code(ROOT / "Autism_Aphantasia_Analyses_code.zip")
     out["arnold"] = _tail_analyses(_arnold_prepared(arnold), floor=ARNOLD_FLOOR_SCORE, ceiling=ARNOLD_CEILING_SCORE, seed=20261011)
+    # Stricter autism definition: formally diagnosed AND AQ >= 26 (Arnold et al.'s own 242-person subset)
+    out["arnold_aq26_subset"] = _tail_analyses(_arnold_prepared(arnold_aq26), floor=ARNOLD_FLOOR_SCORE,
+                                               ceiling=ARNOLD_CEILING_SCORE, seed=20261012)
+    # Within diagnosed adults: do autistic traits (AQ without its imagination items) relate to absent imagery?
+    traits = arnold_traits.copy()
+    traits["any_absent"] = traits[PRIMARY_MODALITIES].eq(ARNOLD_FLOOR_SCORE).any(axis=1).astype(float)
+    within = {}
+    for score in ("AQ_nonimagination", "CATI_total"):
+        use = traits[[score, "any_absent"]].dropna()
+        absent, present = use.loc[use["any_absent"].eq(1), score], use.loc[use["any_absent"].eq(0), score]
+        pooled = np.sqrt(((absent.size - 1) * absent.var() + (present.size - 1) * present.var()) / (use.shape[0] - 2))
+        result = mannwhitneyu(absent, present)
+        within[score] = {"n_absent": int(absent.size), "n_present": int(present.size),
+                         "mean_absent": float(absent.mean()), "mean_present": float(present.mean()),
+                         "cohen_d": float((absent.mean() - present.mean()) / pooled), "mann_whitney_p": float(result.pvalue)}
+    out["arnold_within_autistic_traits_vs_any_absent"] = within
     key = "E3_H1_among_people_with_imagery_in_all_six_senses"
     pieces = [out[key], out["arnold"][key]]
     weights = [1 / piece["se"] ** 2 for piece in pieces]
