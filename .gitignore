@@ -27,3 +27,6 @@ reports/private/
 /h24vm-osfstorage-archive.zip
 /Autism_Aphantasia_Data_FINAL.xlsx
 /Autism_Aphantasia_Analyses_code.zip
+
+# Stray R graphics files
+Rplots*.pdf
