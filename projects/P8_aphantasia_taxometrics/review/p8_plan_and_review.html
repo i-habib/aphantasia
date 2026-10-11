@@ -1,0 +1,260 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>P8 plan and review</title>
+<style>
+:root{--bg:#fcfcfb;--ink:#1f1f1e;--muted:#6b6a63;--rule:#e4e3dd;--accent:#2a78d6;--card:#f4f3ef}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1a19;--ink:#f2f1ea;--muted:#b0afa6;--rule:#3a3a37;--accent:#3987e5;--card:#242422}}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,system-ui,sans-serif;margin:0;padding:24px 16px}
+main{max-width:820px;margin:0 auto} h1{font-size:1.5rem;line-height:1.3} h2{font-size:1.2rem;margin-top:2rem;border-bottom:1px solid var(--rule);padding-bottom:4px} h3{font-size:1.05rem}
+table{border-collapse:collapse;width:100%;font-size:.92rem;margin:12px 0;display:block;overflow-x:auto} th,td{border:1px solid var(--rule);padding:6px 8px;vertical-align:top;text-align:left} th{background:var(--card)}
+code{background:var(--card);padding:1px 4px;border-radius:4px;font-size:.88em} a{color:var(--accent)}
+.review{background:var(--card);border-radius:10px;padding:4px 20px 12px;margin-bottom:32px} .label{color:var(--muted);font-size:.85rem;text-transform:uppercase;letter-spacing:.04em}
+</style></head><body><main>
+<p class="label">P8 · draft, not registered · 11 October 2026</p>
+<div class="review"><h2>Cold-read review (11 Oct 2026)</h2>
+<p><strong>Verdict: fix before registering.</strong> The writing is plain and clear. The methods have one real hole and several gaps, listed below with what I plan to do about each.</p>
+<h3>Methods</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Problem</th>
+<th>Planned fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>The floor can fake two groups.</strong> Many website respondents score the minimum (16), so they are at the floor on all four scene scores at once. The package's simulated continuous data copy each indicator's floor separately, but not a block of people at the floor on all four together; the simulated two-group data do. A continuum with a floor could therefore look like two groups.</td>
+<td>Report how many people are at the floor. Add a planned check: simulate a continuum with the same floor (one underlying factor, item cut-points matched to the real item distributions, same n) and run it through the same pipeline. If that fake continuum also reads as "two groups", we say a two-group result cannot be told apart from a floor effect.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Ties shift the group size.</strong> When the cut falls inside a block of identical scores, the whole block goes to one side, so the actual group size can differ from the one requested.</td>
+<td>Report the group size actually used, and say in the plan that ties are handled this way.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>The population-matched check will rarely say "two groups".</strong> After matching, the possible group is about 4%, below the ~10% the method needs, and score bands with no Dance cases (likely 16–19) drop out, removing the floor block. As written, a two-group conclusion is nearly impossible.</td>
+<td>Say plainly that this check can only weaken a two-group result, and report its expected size. Add a simulation: a known two-group population, selected the way the website was, then matched, to show whether the check can still detect it.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Correlations within each group will be high</strong> (scene scores are parts of one questionnaire), well above the 0.30 guide.</td>
+<td>Add a planned rule for lowering trust when they are high, and list it as a limitation.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Picking the group size from the profile pushes the main fit score up</strong>, because it is the size that gave the best fit.</td>
+<td>Make the profile's own fit score the main evidence, with the cut-off-32 run reported alongside it.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Missing decision rules</strong> for when the three procedures, the two halves, or the robustness checks disagree; and which number answers "how large is the group".</td>
+<td>Add these rules to §6.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Question 3 does not match its definition.</strong> "At least one sense at the floor" is an any-sense group; the question asks about low imagery in all senses.</td>
+<td>Reword question 3 to match.</td>
+</tr>
+</tbody>
+</table>
+<h3>Plan versus code</h3>
+<ul>
+<li>The data fingerprints in §3 are not checked by the code, and the local file names differ from the plan. → Add the checks and list the file names.</li>
+<li>The code does not compute the "most indicators below d = 1.25" flag, and it averages within-group correlations, silently dropping missing ones. → Compute the flag; report full correlation tables.</li>
+<li>If a column were missing, the attention-check filter could drop every row silently. → Stop with an error instead, and report each survey's n.</li>
+<li>The seed for the random halves, and which analyses the wider "unclear" zone applies to, are not stated. → State both.</li>
+<li>Check 3 wording ("groups from the cut-offs") → "group size set to the share at or below 32 or 23".</li>
+</ul>
+<h3>Writing</h3>
+<ul>
+<li>§3.1 points to a §6.3 that does not exist.</li>
+<li>MAMBAC, MAXEIG and L-Mode are never explained, and neither are several package terms. → One plain sentence each.</li>
+<li>"CCFI profile" is used before it is defined.</li>
+<li>The group terms drift between "separate group", "possible group", "two groups" and "taxon". → Use one set of terms throughout.</li>
+<li>The "continuum" row overclaims for a self-report scale. → "The VVIQ data give no support for a boundary."</li>
+<li>Check two attributions against the sources (Haslam et al. on autism; Monzel et al.'s five cut-offs).</li>
+</ul></div>
+<p class="label">Current plan (before fixes)</p>
+<h1>Is aphantasia a separate group or the low end of a continuum? A taxometric analysis of visual and multisensory imagery</h1>
+<p>This is the full analysis plan. It will be registered on OSF (Secondary Data Preregistration template), and the registration will quote this file's SHA-256 fingerprint. The analysis code checks the fingerprint and will not run if this file has changed.</p>
+<ul>
+<li><strong>Author:</strong> Ivan Habib (ORCID https://orcid.org/0009-0002-7812-0371)</li>
+<li><strong>Drafted:</strong> 11 October 2026</li>
+<li><strong>Code:</strong> https://github.com/i-habib/aphantasia, files <code>scripts/p8_taxometrics.R</code> and <code>src/aphantasia/p8.py</code>. Run with <code>python3 scripts/run_available.py --project P8 --preregistration-url &lt;URL&gt;</code>.</li>
+</ul>
+<hr />
+<h2>1. Background</h2>
+<p>People with aphantasia report little or no visual imagery. Researchers disagree about what kind of difference this is. One view treats aphantasia as a condition: a separate group of people who differ in kind from everyone else. The other treats it as the low end of a smooth continuum of imagery vividness, so any cut-off is a convention (Blomkvist &amp; Marks, 2023). Studies use different cut-offs on the Vividness of Visual Imagery Questionnaire (VVIQ), most often a total of 32 or below, or 23 or below. Monzel et al. (2026) compared five such cut-offs in 35,467 people and recommended separating "core" aphantasia from weaker imagery ("hypophantasia"). Neither cut-off comparisons nor cluster analyses can settle whether the groups are real, because a cut-off or a clustering method will produce groups whatever the underlying structure is.</p>
+<p>Taxometric analysis was built for this question (Meehl, 1995; Ruscio, Haslam &amp; Ruscio, 2006). It asks whether the way several measures relate to each other matches what you would see if the data came from two separate groups (a <em>taxon</em> and everyone else) or from one continuum. It compares the real data with simulated data of both kinds that copy the real data's distributions and correlations. A meta-analysis of 183 taxometric studies found that most psychological differences are continuous, with a few possible exceptions, including autism (Haslam, McGrath, Viechtbauer &amp; Kuppens, 2020). We found no taxometric study of aphantasia.</p>
+<p>We ask:</p>
+<ol>
+<li>Is low visual imagery, as measured by the VVIQ, a separate group or a continuum?</li>
+<li>If it is a separate group, how large is that group?</li>
+<li>Is low imagery across all the senses a separate group or a continuum?</li>
+</ol>
+<p>The answer matters for how aphantasia should be studied. If it is a separate group, studies should identify its members and compare them with everyone else. If it is a continuum, studies should treat imagery as a score and stop relying on cut-offs.</p>
+<h2>2. Hypotheses</h2>
+<p>We test two competing descriptions and make no prediction about which will fit better:</p>
+<ul>
+<li><strong>Separate group:</strong> the data fit simulated two-group data better than simulated continuous data.</li>
+<li><strong>Continuum:</strong> the data fit simulated continuous data better.</li>
+</ul>
+<p>The main question is (1), in the main sample (§3.1). Questions (2) and (3) are secondary.</p>
+<h2>3. Data</h2>
+<h3>3.1 Main sample: Aphantasia Network (Monzel et al., 2026)</h3>
+<ul>
+<li>VVIQ answers from 35,467 people collected online by the Aphantasia Network between July and November 2024 and shared by Monzel et al. (2026) at OSF project 8fn9v (view-only link given in their paper). File <code>Total_data_set.Rdata</code>, SHA-256 <code>2f601bff1328d7ae87832d67e689588c31fa4380177ec6f7c260b243dee5a5e6</code>.</li>
+<li>Each of the 16 VVIQ items is answered from 1 ("no image at all, I only know that I am thinking of the object") to 5 ("perfectly clear and as vivid as normal vision"). The total runs from 16 to 80.</li>
+<li>The questionnaire was hosted on an aphantasia website, so people with weak imagery are heavily over-represented. Monzel et al. say so themselves. §3.2 and §6.3 deal with this.</li>
+</ul>
+<h3>3.2 Population-matched subsample of the main sample</h3>
+<p>Over-representing one end of a continuum can make it look like two groups. To check this, we draw a subsample of the main sample whose VVIQ totals follow the distribution in an unselected sample: the pooled Dance et al. (2022) data (§3.3). We split VVIQ totals into 16 bands of 4 points (16–19, 20–23, …, 76–79, with 80 added to the top band). We then sample people at random, without replacement, from each band so that the proportions match the Dance et al. proportions. The subsample is the largest one possible under that rule. The random seed is fixed in the code (20261011).</p>
+<h3>3.3 Unselected sample: Dance et al. (2022)</h3>
+<ul>
+<li>VVIQ answers from 1,004 people in two samples (university students and Amazon Mechanical Turk workers) who were not recruited for their imagery. OSF project mxyv9, file <code>AphantasiaPrevalenceData.sav</code>, SHA-256 <code>43512d3962d933ceadefd660c3be92dfe62be5528bb11fb35d8777c006ad9633</code>.</li>
+<li>Items are scored as in §3.1 (the file's readme defines aphantasia as a total of 16–32).</li>
+<li>Only about 4% of people in samples like this have a VVIQ total of 32 or below. Taxometric analysis has little power when the possible group is that small, so we expect this sample to be inconclusive and treat it as secondary.</li>
+</ul>
+<h3>3.4 Multisensory sample: New et al. (2026), both surveys</h3>
+<ul>
+<li>Imagery scores for eight senses from two online surveys of adults recruited through Prolific (New et al., 2026; OSF project 2bdn6). Files <code>Analyses/Exp1.1003.txt</code> (SHA-256 <code>08e7f1411491e7fe976fba106987a242a6067cec187a5efae212d2a290cc20dd</code>) and <code>Analyses/Exp3.1020.txt</code> (SHA-256 <code>f9468859aca11bd6da673edd5cf774a01c5699924e2104bc703687e541fbb1f2</code>), inside the OSF archive with SHA-256 <code>6abd7a36b3e89c20936c295f5a8569aea545b49562f8ef388a057a5e75462bdd</code>.</li>
+<li>Study 1 has 1,003 people in its file. Study 2 has 1,003 after New et al.'s attention check.</li>
+<li>Each sense score is the sum of five 1–7 ratings (5 to 35). The eight senses in both surveys are sight (<code>image</code>), sound, touch, movement (<code>motor</code>), taste, smell, emotion and voice. Study 2's inner-body sense is left out because Study 1 did not measure it.</li>
+<li>We apply New et al.'s attention-check rule (<code>nbact</code> of 3 or more) to both surveys.</li>
+</ul>
+<h3>3.5 Who is included</h3>
+<p>In every sample we remove people with any missing item and, in the main sample, repeat entries with the same <code>subject_id</code> (we keep the first). We remove no other outliers. The code stops if any answer is outside the questionnaire's range.</p>
+<h2>4. Variables</h2>
+<h3>4.1 Indicators</h3>
+<p>Taxometric analysis needs several separate measures of the same thing, called <em>indicators</em>.</p>
+<ul>
+<li><strong>VVIQ samples (§3.1–3.3).</strong> The VVIQ has four scenes with four items each: a relative or friend (items 1–4), a rising sun (5–8), a shop (9–12) and a country scene (13–16). Each scene's sum (4 to 20) is one indicator, giving four indicators.</li>
+<li><strong>Multisensory sample (§3.4).</strong> Each of the eight sense scores is one indicator. Scores are converted to z-scores within each survey before the two surveys are combined.</li>
+</ul>
+<p>All indicators are reversed so that higher scores mean <em>weaker</em> imagery, because the software expects the possible group to score high.</p>
+<h3>4.2 Provisional group membership</h3>
+<p>The software needs a provisional split into "possible group" and "everyone else" to check the indicators and to build the simulated two-group data. We follow the package's recommended order:</p>
+<ol>
+<li>Estimate the size of the possible group from a CCFI profile (§5.2), using the indicators only.</li>
+<li>Assign the people with the highest summed indicator scores to the possible group, in that proportion (the base-rate method, <code>ClassifyCases</code>).</li>
+</ol>
+<p>The profile only gives a meaningful group size if the data look like two groups. So if the profile's CCFI is below 0.55, we instead use the proportion with a VVIQ total of 32 or below (VVIQ samples), or with at least one sense at the lowest possible score (multisensory sample).</p>
+<h2>5. Analysis</h2>
+<p>All analyses use R with the RTaxometrics package, version 3.2.1 (Ruscio &amp; Wang, 2023), with its default settings unless stated.</p>
+<h3>5.1 Checking the data</h3>
+<p>Before each analysis we run <code>CheckData</code> and report what it reports for each sample:
+- how well each indicator separates the provisional groups (Cohen's d; 1.25 or more is the usual guide);
+- correlations between indicators within each provisional group (0.30 or less is the usual guide);
+- skew;
+- sample size.</p>
+<p>We run the analysis whatever these checks show, but if most indicators separate the groups by less than d = 1.25, we say the result is less trustworthy.</p>
+<h3>5.2 Main analysis</h3>
+<p>For each sample we run three taxometric procedures, MAMBAC, MAXEIG and L-Mode, with <code>RunTaxometrics</code>. Each procedure draws a curve from the real data. The package also draws the same curves for 100 simulated two-group data sets and 100 simulated continuous data sets, both built to copy the real indicators' distributions and correlations.</p>
+<p>The result is the <strong>comparison curve fit index (CCFI)</strong>. It runs from 0 to 1: values near 1 mean the real curves look more like the two-group simulations, and values near 0 mean they look more like the continuous ones. We use the package's average across the three procedures (curves averaged before the CCFI is calculated; Ruscio, Carney, Dever, Pliskin &amp; Wang, 2018).</p>
+<p>We also run <code>RunCCFIProfile</code>, which repeats the comparison with simulated two-group data at 39 group sizes from 2.5% to 97.5%. If the data look like two groups, the group size with the highest CCFI is our estimate of how large the group is. This is slow (about 1.5 hours for 5,000 people), so in samples larger than 5,000 the profile uses a random subsample of 5,000 (seed 20261011). All other analyses use the whole sample.</p>
+<p>Settings: the package defaults (100,000-case comparison populations, 100 comparison samples of each kind, 50 cuts for MAMBAC, 50 windows with 90% overlap for MAXEIG), with seed 20261011.</p>
+<h3>5.3 Robustness checks</h3>
+<p>In the main sample:</p>
+<ol>
+<li><strong>Population-matched subsample</strong> (§3.2).</li>
+<li><strong>Eight indicators instead of four:</strong> pairs of items (1–2, 3–4, …, 15–16).</li>
+<li><strong>Provisional groups from the VVIQ cut-offs</strong> of 32 and of 23 instead of the CCFI profile.</li>
+<li><strong>Two random halves</strong>, analysed separately, to see whether the result repeats.</li>
+<li><strong>A wider "unclear" zone</strong> (§6), from 0.40 to 0.60.</li>
+</ol>
+<p>Checks 2 and 4 use the same provisional group size as the main analysis. Check 1 estimates its own (§4.2).</p>
+<h3>5.4 Secondary samples</h3>
+<p>The same analysis (§5.1–5.2) in the Dance et al. sample (§3.3) and the multisensory sample (§3.4).</p>
+<h2>6. How we will read the results</h2>
+<table>
+<thead>
+<tr>
+<th>Average CCFI</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.55 or above</td>
+<td>The data look more like two separate groups</td>
+</tr>
+<tr>
+<td>0.45 or below</td>
+<td>The data look more like one continuum</td>
+</tr>
+<tr>
+<td>Between 0.45 and 0.55</td>
+<td>Unclear</td>
+</tr>
+</tbody>
+</table>
+<p>Across samples:</p>
+<table>
+<thead>
+<tr>
+<th>Main sample</th>
+<th>Population-matched subsample</th>
+<th>Reading</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Two groups</td>
+<td>Two groups</td>
+<td>Aphantasia looks like a separate group, and this is not just because of how the main sample was collected.</td>
+</tr>
+<tr>
+<td>Two groups</td>
+<td>Continuum or unclear</td>
+<td>The two-group result may come from the website sample over-representing weak imagery. We will not conclude that aphantasia is a separate group.</td>
+</tr>
+<tr>
+<td>Continuum</td>
+<td>any</td>
+<td>Low visual imagery looks like the low end of a continuum, and VVIQ cut-offs are conventions rather than boundaries between kinds of people.</td>
+</tr>
+<tr>
+<td>Unclear</td>
+<td>any</td>
+<td>The data cannot tell the two apart.</td>
+</tr>
+</tbody>
+</table>
+<p>We read the Dance et al. sample and the multisensory sample in the same way, but give an unclear result there little weight, because the possible group is expected to be small (§3.3).</p>
+<h2>7. What we already know about the data</h2>
+<ul>
+<li><strong>Main sample:</strong> we have read Monzel et al. (2026), which reports how many people fall below each cut-off and that the VVIQ items behave as a single scale. We have looked only at the file's column names and number of rows. We have not looked at any scores.</li>
+<li><strong>Dance et al. sample:</strong> we have looked only at the column names, the number of rows and the readme.</li>
+<li><strong>Multisensory sample:</strong> we have used New et al.'s data in earlier work, including how often people score at the lowest possible level in each sense, and how imagery differs between people who did or did not report autism or ADHD (a separate preregistered study, OSF https://osf.io/87udm). We have not run any taxometric or mixture analysis on it.</li>
+<li>The analysis code will not run until this plan is registered. Its tests use only simulated data.</li>
+</ul>
+<h2>8. Sample size</h2>
+<p>The samples are fixed. Taxometric analysis works best with at least 300 people and a possible group making up at least about 10% of the sample. The main sample is very large, and people with weak imagery are common in it. The population-matched subsample and the Dance et al. sample will have far fewer people with weak imagery, which is why we expect less clear results there.</p>
+<h2>9. Software</h2>
+<p>R 4.5 or later (we use 4.6.1) with RTaxometrics 3.2.1, jsonlite (to write results) and the <code>foreign</code> package, which comes with R and is used to read the SPSS file. A short Python step (<code>src/aphantasia/p8.py</code>) checks the registration before calling R. The code writes only summary results and the package's graphs, never individual rows. Random seeds are fixed in the code.</p>
+<h2>10. Changes to the plan</h2>
+<p>Any change is logged in <code>projects/P8_aphantasia_taxometrics/protocol/deviations.md</code> with the date, the reason, whether we had seen any results, and how it affects the conclusions. Changes are reported in the paper. This file is not edited after registration.</p>
+<h2>11. Planned outputs</h2>
+<ul>
+<li>Flow of participants for each sample.</li>
+<li>Data checks (§5.1) for each sample.</li>
+<li>Average CCFI and the CCFI for each procedure, for each sample and robustness check.</li>
+<li>Figure: the package's graph sheet for the main sample, showing the real curves against the simulated two-group and continuous curves.</li>
+<li>If the data look like two groups: the estimated group size and how it compares with the VVIQ cut-offs.</li>
+<li>Limitations: the main sample came from an aphantasia website; the VVIQ is a self-report questionnaire; the four scene scores share a format and may correlate for reasons other than imagery; the secondary samples have small possible groups.</li>
+</ul>
+<h2>References</h2>
+<ul>
+<li>Blomkvist, A., &amp; Marks, D. F. (2023). Defining and "diagnosing" aphantasia: Condition or individual difference? <em>Cortex</em>, 169, 220–234. https://doi.org/10.1016/j.cortex.2023.09.004</li>
+<li>Dance, C. J., Ipser, A., &amp; Simner, J. (2022). The prevalence of aphantasia (imagery weakness) in the general population. <em>Consciousness and Cognition</em>, 97, 103243. https://doi.org/10.1016/j.concog.2021.103243. Data: OSF mxyv9.</li>
+<li>Haslam, N., McGrath, M. J., Viechtbauer, W., &amp; Kuppens, P. (2020). Dimensions over categories: A meta-analysis of taxometric research. <em>Psychological Medicine</em>. https://doi.org/10.1017/S003329172000183X</li>
+<li>Meehl, P. E. (1995). Bootstraps taxometrics: Solving the classification problem in psychopathology. <em>American Psychologist</em>, 50, 266–275.</li>
+<li>Monzel, M., Pickering, J. W., Condon, D. M., Beran, M. J., &amp; Ebeyer, T. (2026). Reimagining the vividness of visual imagery questionnaire as a single item screener for aphantasia. <em>Consciousness and Cognition</em>, 142, 104061. https://doi.org/10.1016/j.concog.2026.104061</li>
+<li>New, B., Barra, J., Chauvin, A., Huson, M., Lœvenbruck, H., et al. (2026). Multimodal mental imagery profiles and the prevalence of aphantasia and hyperphantasia in the general population. <em>Cortex</em>, 201, 119–136. https://doi.org/10.1016/j.cortex.2026.04.019. Data: OSF 2bdn6.</li>
+<li>Ruscio, J., Carney, L. M., Dever, L., Pliskin, M., &amp; Wang, S. B. (2018). Using the comparison curve fit index (CCFI) in taxometric analyses: Averaging curves, standard errors, and CCFI profiles. <em>Psychological Assessment</em>, 30(6), 744–754.</li>
+<li>Ruscio, J., Haslam, N., &amp; Ruscio, A. M. (2006). <em>Introduction to the taxometric method: A practical guide</em>. Lawrence Erlbaum.</li>
+<li>Ruscio, J., &amp; Wang, S. B. (2023). RTaxometrics: Taxometric analysis (R package version 3.2.1). https://CRAN.R-project.org/package=RTaxometrics</li>
+</ul>
+</main></body></html>

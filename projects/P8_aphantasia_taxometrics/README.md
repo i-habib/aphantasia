@@ -1,6 +1,6 @@
 # P8: is aphantasia a separate group or the low end of a continuum?
 
-**State:** plan drafted 11 Oct 2026; not registered. No taxometric analysis has been run on real data.
+**State:** plan drafted and revised after a cold-read review, 11 Oct 2026 (review and changes in `review/`). Not registered; no taxometric analysis has been run on real data.
 
 - Plan: [`protocol/preregistration.md`](protocol/preregistration.md); changes: [`protocol/deviations.md`](protocol/deviations.md)
 - Code: `scripts/p8_taxometrics.R` (RTaxometrics 3.2.1), gate in `src/aphantasia/p8.py`
