@@ -1,6 +1,6 @@
 # P8: is aphantasia a separate group or the low end of a continuum?
 
-**State:** plan drafted and revised after a cold-read review, 11 Oct 2026 (review and changes in `review/`). Not registered; no taxometric analysis has been run on real data.
+**State:** registered on OSF 11 Oct 2026 (https://osf.io/w8xj9, embargoed until 25 Nov 2026) and frozen (SHA-256 `23a4b751…`). Revised after a cold-read review before registering (`review/`). The registered analysis has not been run yet.
 
 - Plan: [`protocol/preregistration.md`](protocol/preregistration.md); changes: [`protocol/deviations.md`](protocol/deviations.md)
 - Code: `scripts/p8_taxometrics.R` (RTaxometrics 3.2.1), gate in `src/aphantasia/p8.py`
@@ -21,8 +21,9 @@ python3 scripts/run_available.py --project P8 --preregistration-url <URL>   # se
 
 Needs R 4.5 or later with `RTaxometrics` 3.2.1 and `jsonlite`.
 
-## Before registering
+## Next
 
-- [ ] Read the plan; any edit must happen now.
-- [ ] Check reuse terms for the Aphantasia Network data (shared through a view-only OSF link in Monzel et al. 2026); cite the dataset and consider contacting the authors.
-- [ ] Register on OSF, freeze, then run once.
+- [ ] Run once: `python3 scripts/run_available.py --project P8 --preregistration-url https://osf.io/w8xj9` (several hours).
+- [ ] Cite the Aphantasia Network dataset (Monzel et al. 2026); consider telling the authors.
+
+OSF answers: `projects/osf_drafts/p8_osf_responses.json` (draft 6acbb5a7559cf343cd2674f5).
