@@ -17,7 +17,8 @@ E6  the one non-imagery 1-7 rating in the survey ("I am an empathetic person").
 
     python3 scripts/p5_exploratory.py --preregistration-url https://osf.io/87udm
 
-Writes aggregate results only, to runs/latest/P5/p5_exploratory.json.
+Writes aggregate results only, to runs/latest/P5/p5_exploratory.json. Uses statsmodels
+(already a test dependency) for the quantile regressions.
 """
 from __future__ import annotations
 
@@ -30,6 +31,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.stats import fisher_exact, norm, t
+from statsmodels.regression.quantile_regression import QuantReg
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -41,6 +43,8 @@ from aphantasia.p5 import (ARNOLD_FLOOR_SCORE, EXPLORATORY_MODALITIES, _arnold_p
 NEW_CEILING_SCORE = 35
 ARNOLD_CEILING_SCORE = 50
 BOOTSTRAP_DRAWS = 5000
+CURVE_DRAWS = 2000
+EQUIVALENCE_BOUND_SD = 0.2
 
 
 def _extra_columns(path: Path) -> pd.DataFrame:
@@ -66,6 +70,25 @@ def _effect(frame: pd.DataFrame, outcome: str, *, extra_numeric: tuple[str, ...]
     half = t.ppf(0.975, df) * se
     return {"estimate": estimate, "se": se, "ci95": [estimate - half, estimate + half],
             "p_two_sided": float(2 * t.sf(abs(estimate / se), df)), "n": diag["n"]}
+
+
+def _quantile_regression(pair: pd.DataFrame) -> dict:
+    """Autism difference at several percentiles of overall imagery, adjusted for age and sex."""
+    use = pair[["general_z", "in_group", "age", "sex_gender"]].dropna().copy()
+    sexes = sorted(use["sex_gender"].astype(str).unique())
+    columns = {"const": np.ones(len(use)), "in_group": use["in_group"].to_numpy(float), "age": use["age"].to_numpy(float)}
+    for level in sexes[1:]:
+        columns[f"sex_{level}"] = use["sex_gender"].astype(str).eq(level).to_numpy(float)
+    x = pd.DataFrame(columns)
+    x = x.loc[:, x.std().gt(0) | (x.columns == "const")]
+    out = {}
+    for q in (0.10, 0.25, 0.50, 0.75, 0.90):
+        fit = QuantReg(use["general_z"].to_numpy(float), x).fit(q=q, max_iter=5000)
+        estimate, se = float(fit.params["in_group"]), float(fit.bse["in_group"])
+        out[f"q{round(q * 100)}"] = {"estimate": estimate, "se": se, "ci95": [estimate - 1.96 * se, estimate + 1.96 * se],
+                                     "p_two_sided": float(2 * norm.sf(abs(estimate / se)))}
+    out["n"] = int(len(use))
+    return out
 
 
 def _tail_analyses(pair: pd.DataFrame, *, floor: float, ceiling: float, seed: int) -> dict:
@@ -103,7 +126,16 @@ def _tail_analyses(pair: pd.DataFrame, *, floor: float, ceiling: float, seed: in
                           for _ in range(BOOTSTRAP_DRAWS)])
         quantiles[f"q{round(q * 100)}"] = {"difference": observed,
                                           "bootstrap_ci95": [float(np.quantile(draws, 0.025)), float(np.quantile(draws, 0.975))]}
+    curve = []
+    for q in np.arange(0.05, 0.951, 0.05):
+        observed = float(np.quantile(a_values, q) - np.quantile(r_values, q))
+        draws = np.array([np.quantile(rng.choice(a_values, a_values.size), q) - np.quantile(rng.choice(r_values, r_values.size), q)
+                          for _ in range(CURVE_DRAWS)])
+        curve.append({"percentile": round(100 * q), "difference": observed,
+                      "ci95": [float(np.quantile(draws, 0.025)), float(np.quantile(draws, 0.975))]})
     return {"E1_answering_style": style,
+            "E3_adjusted_quantile_regression": _quantile_regression(pair),
+            "E3_percentile_curve_unadjusted": curve,
             "E3_H1_among_people_with_imagery_in_all_six_senses": _effect(pair.loc[~any_floor], "general_z"),
             "E3_percentile_differences_unadjusted": quantiles}
 
@@ -148,6 +180,17 @@ def main() -> int:
     # E1 and E3 repeated in Arnold et al.'s data (scores 0-50, floor 0)
     arnold, _, _, _ = load_arnold_code(ROOT / "Autism_Aphantasia_Analyses_code.zip")
     out["arnold"] = _tail_analyses(_arnold_prepared(arnold), floor=ARNOLD_FLOOR_SCORE, ceiling=ARNOLD_CEILING_SCORE, seed=20261011)
+    key = "E3_H1_among_people_with_imagery_in_all_six_senses"
+    pieces = [out[key], out["arnold"][key]]
+    weights = [1 / piece["se"] ** 2 for piece in pieces]
+    pooled = sum(w * piece["estimate"] for w, piece in zip(weights, pieces)) / sum(weights)
+    pooled_se = sum(weights) ** -0.5
+    out["E3_pooled_two_studies_people_with_imagery_in_all_senses"] = {
+        "estimate": pooled, "se": pooled_se, "ci95": [pooled - 1.96 * pooled_se, pooled + 1.96 * pooled_se],
+        "ci90": [pooled - 1.645 * pooled_se, pooled + 1.645 * pooled_se],
+        "equivalence_bound_sd": EQUIVALENCE_BOUND_SD,
+        "tost_p": float(max(norm.sf((pooled + EQUIVALENCE_BOUND_SD) / pooled_se), norm.cdf((pooled - EQUIVALENCE_BOUND_SD) / pooled_se))),
+        "note": "fixed-effect inverse-variance pooling; selects people on their imagery scores, so read alongside the percentile results"}
 
     # E4 senses only New et al. measured, plus a nine-sense composite
     extra = {sense: _effect(pair, f"z_{sense}") for sense in EXPLORATORY_MODALITIES}
