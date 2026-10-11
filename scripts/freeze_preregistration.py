@@ -4,6 +4,7 @@ Run once, immediately after uploading the plan to the registry:
 
     python3 scripts/freeze_preregistration.py --project P5
     python3 scripts/freeze_preregistration.py --project P7
+    python3 scripts/freeze_preregistration.py --project P8
 
 The project's analysis refuses to run if the plan changes afterwards.
 Record later changes in that project's deviations log rather than editing the plan.
@@ -19,8 +20,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from aphantasia.p5 import PLAN_PATH as P5_PLAN, plan_digest  # noqa: E402
 from aphantasia.p7 import PLAN_PATH as P7_PLAN  # noqa: E402
+from aphantasia.p8 import PLAN_PATH as P8_PLAN  # noqa: E402
 
-PLANS = {"P5": P5_PLAN, "P7": P7_PLAN}
+PLANS = {"P5": P5_PLAN, "P7": P7_PLAN, "P8": P8_PLAN}
 
 
 def main() -> int:

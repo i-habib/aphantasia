@@ -9,6 +9,7 @@ from .datasets import audit_mawtus_feasibility, load_arnold_code, load_new_studi
 from .models import AnalysisStop, run_p1, run_p3
 from .p5 import plan_p5, run_p5, verify_registration
 from .p7 import PLAN_PATH as P7_PLAN, run_p7, write_node_map
+from .p8 import PLAN_PATH as P8_PLAN, run_p8
 
 
 def _write_json(path: Path, value: dict) -> None:
@@ -37,13 +38,20 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the staged, aggregate-only aphantasia analyses.")
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="Workspace containing the staged public archives (defaults to the current directory).")
     parser.add_argument("--output", type=Path, default=None, help="Aggregate-only output directory; defaults to ROOT/runs/latest.")
-    parser.add_argument("--project", choices=["all", "P1", "P3", "P4", "P5-plan", "P5", "P7-map", "P7"], default="all",
-                        help="'all' never includes P5 or P7. P5-plan / P7-map are pre-registration steps; P5 / P7 run registered analyses.")
-    parser.add_argument("--preregistration-url", default=None, help="Public registration link; required for --project P5 and P7.")
+    parser.add_argument("--project", choices=["all", "P1", "P3", "P4", "P5-plan", "P5", "P7-map", "P7", "P8"], default="all",
+                        help="'all' never includes P5, P7 or P8. P5-plan / P7-map are pre-registration steps; P5 / P7 / P8 run registered analyses.")
+    parser.add_argument("--preregistration-url", default=None, help="Public registration link; required for --project P5, P7 and P8.")
     args = parser.parse_args(argv)
     root = args.root.resolve()
     output = (args.output or root / "runs" / "latest").resolve()
-    if args.project == "P7":
+    if args.project == "P8":
+        try:
+            registration = verify_registration(root, args.preregistration_url, P8_PLAN)
+            result = {"P8": run_p8(root, output / "P8", registration=registration)}
+        except AnalysisStop as stop:
+            print(json.dumps({"P8": {"status": stop.status, "code": stop.code, "message": stop.message}}, indent=2))
+            return 2
+    elif args.project == "P7":
         try:
             registration = verify_registration(root, args.preregistration_url, P7_PLAN)
         except AnalysisStop as stop:
