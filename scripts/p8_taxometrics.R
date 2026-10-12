@@ -265,6 +265,131 @@ analyse <- function(x, label, p, out_dir, with_profile = FALSE, graph_file = NUL
   out
 }
 
+# ---- fast CCFI profile: the package's RunCCFIProfile, split by taxon size (deviation logged 2026-10-11) ----
+# RunCCFIProfile draws one random stream for all 39 sizes in turn, so it cannot be split across cores. Here each size
+# gets its own seed (SEED + i); the steps for each size are the package's own (same internal functions, same order).
+
+rt <- function(name) get(name, envir = asNamespace("RTaxometrics"))
+
+profile_setup <- function(x, n.samples = 100, num.p = 39) {
+  set.seed(SEED)
+  x <- as.matrix(x)
+  storage.mode(x) <- "double"
+  if (nrow(x) > PROFILE_MAX_N) x <- x[sample.int(nrow(x), PROFILE_MAX_N), , drop = FALSE]
+  n_used <- nrow(x)
+  parameters <- list(min.p = 0.025, max.p = 0.975, num.p = num.p, n = nrow(x), k = ncol(x), n.pop = 1e5, n.samples = n.samples,
+                     reps = 1, MAMBAC = TRUE, assign.MAMBAC = 1, n.cuts = 50, n.end = 25, MAXEIG = TRUE, assign.MAXEIG = 1,
+                     windows = 50, overlap = 0.9, LMode = TRUE, mode.l = -0.001, mode.r = 0.001, MAXSLOPE = FALSE,
+                     graph = 0, profile = TRUE)
+  x <- rt("RemoveMissingData")(x)
+  x <- rt("AddVariance")(x, ncol(x), parameters)
+  x <- apply(x, 2, scale)
+  parameters <- rt("CheckParameters")(x, parameters)
+  x.results <- rt("RunProcedures")(x, parameters)
+  x.dim <- rt("GenerateData")(x, n = parameters$n.pop)
+  x.dim.results <- rt("RunProceduresComp")(x.dim, parameters)
+  list(x = x, parameters = parameters, x.results = x.results, x.dim.results = x.dim.results, n_used = n_used,
+       ps = seq(parameters$min.p, parameters$max.p, length = parameters$num.p))
+}
+
+profile_part <- function(setup, i) {
+  set.seed(SEED + i)
+  k <- ncol(setup$x)
+  p <- setup$ps[i]
+  x.classes <- ClassifyCases(setup$x, p = p)
+  group <- x.classes[, k + 1]
+  taxon <- rt("GenerateData")(x.classes[(group == 2), 1:k], n = round(setup$parameters$n.pop * p))
+  complement <- rt("GenerateData")(x.classes[(group == 1), 1:k], n = setup$parameters$n.pop - round(setup$parameters$n.pop * p))
+  x.cat.results <- rt("RunProceduresComp")(rbind(taxon, complement), setup$parameters)
+  rt("CalculateCCFIsProfile")(setup$x.results, setup$x.dim.results, x.cat.results, setup$parameters)
+}
+
+profile_summary <- function(setup, columns) {
+  ccfis <- do.call(cbind, columns)
+  profile <- rt("CalculateProfileOutput")(ccfis, setup$parameters)
+  list(n_used = setup$n_used, ccfi = profile$CCFI.mean, base_rate = profile$p.mean,
+       ccfi_by_procedure = list(MAMBAC = profile$CCFI.MAMBAC, MAXEIG = profile$CCFI.MAXEIG, LMode = profile$CCFI.LMode),
+       base_rate_by_procedure = list(MAMBAC = profile$p.MAMBAC, MAXEIG = profile$p.MAXEIG, LMode = profile$p.LMode),
+       ccfi_by_size = unname(ccfis[5, ]), sizes = setup$ps, method = "split_by_size")
+}
+
+# Same analyses as run_analyses(), in four parallel phases: (1) every analysis without its profile, plus each profile's
+# shared setup; (2) every profile size, plus the detectability analysis and its setup; (3) the detectability profile
+# sizes and the profile-size check; (4) assembly.
+run_analyses_fast <- function(monzel_items, dance_items, new, out_dir, cores, n.samples = 100, num.p = 39) {
+  main_x <- scene_indicators(monzel_items)
+  p32 <- share_at_or_below(monzel_items, 32)
+  matched <- matched_subsample(monzel_items, dance_items)
+  matched_items <- monzel_items[matched$rows, , drop = FALSE]
+  set.seed(SEED)
+  half <- sample(rep(1:2, length.out = nrow(main_x)))
+  floored <- simulate_floored_continuum(monzel_items)
+  inputs <- list(
+    main = list(x = main_x, p = p32, profile = TRUE, graph = file.path(out_dir, "graphs_main.pdf"), label = "main_scenes"),
+    matched = list(x = main_x[matched$rows, ], p = share_at_or_below(matched_items, 32), profile = TRUE, label = "matched_scenes"),
+    item_pairs = list(x = pair_indicators(monzel_items), p = p32, profile = FALSE, label = "main_pairs"),
+    cutoff_23 = list(x = main_x, p = share_at_or_below(monzel_items, 23), profile = FALSE, label = "main_cut23"),
+    half_1 = list(x = main_x[half == 1, ], p = share_at_or_below(monzel_items[half == 1, ], 32), profile = FALSE, label = "half_1"),
+    half_2 = list(x = main_x[half == 2, ], p = share_at_or_below(monzel_items[half == 2, ], 32), profile = FALSE, label = "half_2"),
+    floored = list(x = scene_indicators(floored$items), p = share_at_or_below(floored$items, 32), profile = TRUE,
+                   label = "floored_continuum"),
+    dance = list(x = scene_indicators(dance_items), p = share_at_or_below(dance_items, 32), profile = TRUE, label = "dance_scenes"),
+    multisensory = list(x = -new$senses, p = mean(new$n_floor >= 4), profile = TRUE, label = "new_multisensory"))
+  run_one <- function(input) analyse(input$x, input$label, input$p, out_dir, graph_file = input$graph, n.samples = n.samples)
+  runnable <- function(input) !is.na(input$p) && round(input$p * nrow(as.matrix(input$x))) >= MIN_TAXON_N
+  with_profile <- names(inputs)[vapply(inputs, function(i) i$profile && runnable(i), logical(1))]
+
+  phase1 <- c(lapply(inputs, function(input) function() run_one(input)),
+              setNames(lapply(with_profile, function(name) function() profile_setup(inputs[[name]]$x, n.samples, num.p)),
+                       paste0("setup__", with_profile)))
+  one <- run_tasks(phase1, cores)
+  parts_for <- function(name, setup) setNames(lapply(seq_along(setup$ps), function(i) function() profile_part(setup, i)),
+                                              sprintf("part__%s__%02d", name, seq_along(setup$ps)))
+  phase2 <- do.call(c, lapply(with_profile, function(name) parts_for(name, one[[paste0("setup__", name)]])))
+  detect <- NULL
+  if (identical(one$matched$status, "run")) {
+    taxon_r <- one$matched$checks$within_r_taxon$mean
+    rest_r <- one$matched$checks$within_r_rest$mean
+    detect <- list(x = simulate_detectable_taxon(matched$n, one$matched$actual_taxon_share, one$matched$checks$mean_validity_d,
+                                                 ifelse(is.na(taxon_r), 0, taxon_r), ifelse(is.na(rest_r), 0, rest_r)),
+                   p = one$matched$actual_taxon_share, label = "matched_detectability")
+    phase2$detect <- function() run_one(detect)
+    phase2$setup__detect <- function() profile_setup(detect$x, n.samples, num.p)
+  }
+  two <- run_tasks(phase2, cores)
+  attach_profile <- function(result, name, parts_from, setup) {
+    columns <- parts_from[sprintf("part__%s__%02d", name, seq_along(setup$ps))]
+    result$profile <- profile_summary(setup, columns)
+    result$combined_verdict <- combined_verdict(result$ccfi$mean, result$profile$ccfi)
+    result
+  }
+  for (name in with_profile) one[[name]] <- attach_profile(one[[name]], name, two, one[[paste0("setup__", name)]])
+
+  phase3 <- list()
+  if (!is.null(detect)) phase3 <- parts_for("detect", two$setup__detect)
+  if (isTRUE(one$main$profile$ccfi >= CCFI_TAXONIC)) {
+    size <- one$main$profile$base_rate
+    phase3$profile_size <- function() analyse(main_x, "main_profile_size", size, out_dir, n.samples = n.samples)
+  }
+  three <- if (length(phase3)) run_tasks(phase3, cores) else list()
+  detectability <- if (!is.null(detect)) attach_profile(two$detect, "detect", three, two$setup__detect) else NULL
+
+  results <- list(main = one$main)
+  results$robustness <- list(
+    matched_subsample = c(list(n = matched$n, band_target = matched$target, band_achieved = matched$achieved,
+                               floor = floor_summary(matched_items)), one$matched),
+    matched_detectability = detectability,
+    item_pairs = one$item_pairs, cutoff_23 = one$cutoff_23, profile_size = three$profile_size,
+    half_1 = one$half_1, half_2 = one$half_2,
+    floored_continuum = c(list(loading = floored$loading, target_mean_r = floored$target_mean_r,
+                               achieved_mean_r = floored$achieved_mean_r, floor = floor_summary(floored$items)), one$floored))
+  results$robustness <- results$robustness[!vapply(results$robustness, is.null, logical(1))]
+  results$secondary <- list(dance = one$dance, multisensory = one$multisensory)
+  results$conclusion <- conclude(results)
+  results$profile_method <- "split_by_size: each of the 39 taxon sizes run with its own seed (SEED + i); see deviations log"
+  results
+}
+
 # ---- reading the main result (plan section 6) ----
 
 conclude <- function(results) {
@@ -382,7 +507,8 @@ run_p8 <- function(root, out_dir, registration, cores = parallel::detectCores())
                     rtaxometrics = as.character(packageVersion("RTaxometrics")), r = R.version.string, cores = cores,
                     flow = list(monzel = monzel$flow, dance = dance$flow, new = new$flow),
                     floor = list(main = floor_summary(monzel$items), dance = floor_summary(dance$items))),
-               run_analyses(monzel$items, dance$items, new, out_dir, cores))
+               if (identical(Sys.getenv("P8_FAST_PROFILE"), "1")) run_analyses_fast(monzel$items, dance$items, new, out_dir, cores)
+               else run_analyses(monzel$items, dance$items, new, out_dir, cores))
   write_json(results, file.path(out_dir, "p8_results.json"), auto_unbox = TRUE, digits = 6, pretty = TRUE, na = "null")
   cat(toJSON(list(P8 = list(status = "complete", reading = results$conclusion$reading,
                             main_ccfi = results$main$ccfi$mean, profile_ccfi = results$main$profile$ccfi)), auto_unbox = TRUE), "\n")
@@ -391,7 +517,7 @@ run_p8 <- function(root, out_dir, registration, cores = parallel::detectCores())
 # ---- self-test on simulated data (no real data) ----
 
 # The whole pipeline on simulated data, with small settings, to check the wiring (no real data).
-selftest_pipeline <- function(cores = 4) {
+selftest_pipeline <- function(cores = 4, fast = FALSE) {
   set.seed(2)
   draw_items <- function(n, floor_share) {
     latent <- rnorm(n)
@@ -405,14 +531,32 @@ selftest_pipeline <- function(cores = 4) {
   new <- list(senses = senses, n_floor = c(rep(5L, 60), rep(0L, 1140)))
   out_dir <- file.path(tempdir(), "p8_pipeline")
   dir.create(out_dir, showWarnings = FALSE)
-  results <- run_analyses(monzel_items, dance_items, new, out_dir, cores, n.samples = 3, num.p = 20)
+  runner <- if (fast) run_analyses_fast else run_analyses
+  results <- runner(monzel_items, dance_items, new, out_dir, cores, n.samples = 3, num.p = 20)
   expected <- c("matched_subsample", "item_pairs", "cutoff_23", "half_1", "half_2", "floored_continuum")
   out <- list(pipeline_keys_ok = all(expected %in% names(results$robustness)),
               detectability_present = !is.null(results$robustness$matched_detectability) ||
                 !identical(results$robustness$matched_subsample$status, "run"),
               secondary_ok = all(c("dance", "multisensory") %in% names(results$secondary)),
               conclusion = results$conclusion$reading,
-              graph_written = isTRUE(file.info(file.path(out_dir, "graphs_main.pdf"))$size > 1000))
+              graph_written = isTRUE(file.info(file.path(out_dir, "graphs_main.pdf"))$size > 1000),
+              profiles_attached = !is.null(results$main$profile$ccfi) && !is.null(results$robustness$floored_continuum$combined_verdict))
+  cat(toJSON(out, auto_unbox = TRUE), "\n")
+}
+
+# Split profile versus the package's RunCCFIProfile on simulated data (different random draws, same method).
+selftest_profile_agreement <- function(cores = 16) {
+  pdf(NULL)
+  out <- list()
+  for (kind in c("cat", "dim")) {
+    x <- CreateData(kind, n = 1500, k = 4, p = 0.3, seed = 7)[, 1:4]
+    package <- RunCCFIProfile(x, seed = SEED, n.samples = 25, num.p = 20, graph = 0)
+    setup <- profile_setup(x, n.samples = 25, num.p = 20)
+    parts <- parallel::mclapply(seq_along(setup$ps), function(i) profile_part(setup, i), mc.cores = cores)
+    split <- profile_summary(setup, parts)
+    out[[kind]] <- list(package_ccfi = package$CCFI.mean, split_ccfi = split$ccfi,
+                        package_p = package$p.mean, split_p = split$base_rate)
+  }
   cat(toJSON(out, auto_unbox = TRUE), "\n")
 }
 
@@ -461,8 +605,10 @@ value_of <- function(flag) {
   i <- match(flag, args)
   if (is.na(i) || i == length(args)) NULL else args[i + 1]
 }
-if ("--selftest" %in% args && "--pipeline" %in% args) {
-  selftest_pipeline()
+if ("--selftest" %in% args && "--agreement" %in% args) {
+  selftest_profile_agreement()
+} else if ("--selftest" %in% args && "--pipeline" %in% args) {
+  selftest_pipeline(cores = if ("--fast" %in% args) 32 else 4, fast = "--fast" %in% args)
 } else if ("--selftest" %in% args) {
   selftest(full = "--full" %in% args)
 } else {

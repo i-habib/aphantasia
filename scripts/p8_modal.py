@@ -67,12 +67,38 @@ def run(preregistration_url: str) -> dict[str, bytes | str]:
     return files
 
 
-@app.function(cpu=16, memory=16384, timeout=3600)
-def selftest_pipeline() -> str:
-    """The whole pipeline on simulated data with small settings; reads no real data."""
+@app.function(cpu=64, memory=131072, timeout=6 * 60 * 60, volumes={"/results": results})
+def run_fast(preregistration_url: str) -> str:
+    """Same analyses with each CCFI profile split by taxon size across cores (deviation logged). Saves to /results/latest_fast."""
+    import os
+    import shutil
     import subprocess
 
-    done = subprocess.run(["Rscript", f"{REMOTE}/scripts/p8_taxometrics.R", "--selftest", "--pipeline"], capture_output=True, text=True)
+    os.makedirs("/results/checkpoints_fast", exist_ok=True)
+    env = {**os.environ, "P8_FAST_PROFILE": "1", "P8_CHECKPOINT_DIR": "/results/checkpoints_fast"}
+    done = subprocess.run(["python3", f"{REMOTE}/scripts/run_available.py", "--root", REMOTE, "--output", "/tmp", "--project", "P8",
+                           "--preregistration-url", preregistration_url], capture_output=True, text=True, env=env)
+    saved = Path("/results/latest_fast")
+    if saved.exists():
+        shutil.rmtree(saved)
+    saved.mkdir(parents=True)
+    (saved / "modal_stdout.txt").write_text(done.stdout)
+    (saved / "modal_stderr.txt").write_text(done.stderr[-20000:])
+    (saved / "modal_returncode.txt").write_text(str(done.returncode))
+    out = Path("/tmp/P8")
+    if out.exists():
+        for path in out.iterdir():
+            shutil.copy(path, saved / path.name)
+    results.commit()
+    return done.stdout[-2000:]
+
+
+@app.function(cpu=32, memory=65536, timeout=3600)
+def selftest_pipeline(extra: list[str]) -> str:
+    """Self-tests on simulated data; reads no real data."""
+    import subprocess
+
+    done = subprocess.run(["Rscript", f"{REMOTE}/scripts/p8_taxometrics.R", "--selftest", *extra], capture_output=True, text=True)
     return done.stdout.strip().splitlines()[-1] if done.stdout.strip() else done.stderr[-3000:]
 
 
@@ -86,12 +112,17 @@ def check() -> str:
 
 
 @app.local_entrypoint()
-def main(preregistration_url: str = "", check_only: bool = False, selftest: bool = False) -> None:
+def main(preregistration_url: str = "", check_only: bool = False, selftest: bool = False, fast: bool = False) -> None:
     if check_only:
         print(check.remote())
         return
     if selftest:
-        print(selftest_pipeline.remote())
+        calls = [selftest_pipeline.spawn(["--agreement"]), selftest_pipeline.spawn(["--pipeline", "--fast"])]
+        for call in calls:
+            print(call.get())
+        return
+    if fast:
+        print(run_fast.remote(preregistration_url))
         return
     files = run.remote(preregistration_url)
     target = ROOT / "runs" / "latest" / "P8"
