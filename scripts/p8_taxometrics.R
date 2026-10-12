@@ -298,7 +298,20 @@ conclude <- function(results) {
 
 run_tasks <- function(tasks, cores) {
   # Each analysis sets its own seeds, so running them in parallel gives the same results as running them in turn.
-  out <- parallel::mclapply(tasks, function(task) task(), mc.cores = max(1, min(cores, length(tasks))),
+  # If P8_CHECKPOINT_DIR is set, each finished analysis is saved there and reused on a restart.
+  checkpoints <- Sys.getenv("P8_CHECKPOINT_DIR")
+  wrapped <- lapply(names(tasks), function(name) {
+    force(name)
+    function() {
+      file <- if (nzchar(checkpoints)) file.path(checkpoints, paste0(name, ".rds")) else ""
+      if (nzchar(file) && file.exists(file)) return(readRDS(file))
+      value <- tasks[[name]]()
+      if (nzchar(file)) saveRDS(value, file)
+      value
+    }
+  })
+  names(wrapped) <- names(tasks)
+  out <- parallel::mclapply(wrapped, function(task) task(), mc.cores = max(1, min(cores, length(tasks))),
                             mc.preschedule = FALSE, mc.set.seed = FALSE)
   failed <- vapply(out, function(x) inherits(x, "try-error") || is.null(x), logical(1))
   if (any(failed)) stop(sprintf("analysis failed: %s\n%s", paste(names(tasks)[failed], collapse = ", "),

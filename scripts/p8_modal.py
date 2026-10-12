@@ -35,12 +35,16 @@ app = modal.App("aphantasia-p8", image=image)
 results = modal.Volume.from_name("aphantasia-p8-results", create_if_missing=True)
 
 
-@app.function(cpu=16, memory=32768, timeout=8 * 60 * 60, volumes={"/results": results})
+@app.function(cpu=16, memory=32768, timeout=24 * 60 * 60, volumes={"/results": results})
 def run(preregistration_url: str) -> dict[str, bytes | str]:
+    import os
     import shutil
     import subprocess
 
     out = Path("/tmp/P8")
+    # Finished analyses are saved here, so a restart skips them (Modal commits volume writes in the background).
+    os.makedirs("/results/checkpoints", exist_ok=True)
+    os.environ["P8_CHECKPOINT_DIR"] = "/results/checkpoints"
     completed = subprocess.run(
         ["python3", f"{REMOTE}/scripts/run_available.py", "--root", REMOTE, "--output", "/tmp", "--project", "P8",
          "--preregistration-url", preregistration_url],
