@@ -313,6 +313,36 @@ profile_summary <- function(setup, columns) {
        ccfi_by_size = unname(ccfis[5, ]), sizes = setup$ps, method = "split_by_size")
 }
 
+# One share of the profile pieces, so several machines can work at once. Every piece has its own seed and is saved
+# under its own name, so a later full run reuses it and computes the same results. shard is "i/n" or "profile_size".
+# "i/n" takes every n-th piece, starting from the end, because a full run works through the pieces from the start.
+# "profile_size" computes the main sample's 39 sizes and then, if the main profile reads as two groups, the
+# profile-size check. Nothing is printed; the results are only in the saved files.
+run_shard <- function(shard, phase2, parts_for, one, main_x, out_dir, cores, n.samples) {
+  if (identical(shard, "profile_size")) {
+    setup <- one$setup__main
+    parts <- run_tasks(parts_for("main", setup), cores)
+    profile <- profile_summary(setup, parts)
+    if (isTRUE(profile$ccfi >= CCFI_TAXONIC)) {
+      run_tasks(list(profile_size = function() analyse(main_x, "main_profile_size", profile$base_rate, out_dir,
+                                                        n.samples = n.samples)), 1)
+    }
+    return(list(shard = shard, pieces = length(parts) + isTRUE(profile$ccfi >= CCFI_TAXONIC)))
+  }
+  where <- as.integer(strsplit(shard, "/", fixed = TRUE)[[1]])
+  stopifnot(length(where) == 2, where[1] >= 1, where[1] <= where[2])
+  pieces <- phase2[setdiff(names(phase2), "setup__detect")]
+  if (!is.null(phase2$setup__detect)) {
+    # Every shard computes the same detectability setup (fixed seed), so each can take some of its sizes.
+    setup <- run_tasks(phase2["setup__detect"], 1)$setup__detect
+    pieces <- c(pieces, parts_for("detect", setup))
+  }
+  pieces <- rev(pieces)
+  mine <- pieces[(seq_along(pieces) - 1) %% where[2] == where[1] - 1]
+  run_tasks(mine, cores)
+  list(shard = shard, pieces = length(mine))
+}
+
 # Same analyses as run_analyses(), in four parallel phases: (1) every analysis without its profile, plus each profile's
 # shared setup; (2) every profile size, plus the detectability analysis and its setup; (3) the detectability profile
 # sizes and the profile-size check; (4) assembly.
@@ -342,6 +372,9 @@ run_analyses_fast <- function(monzel_items, dance_items, new, out_dir, cores, n.
   phase1 <- c(lapply(inputs, function(input) function() run_one(input)),
               setNames(lapply(with_profile, function(name) function() profile_setup(inputs[[name]]$x, n.samples, num.p)),
                        paste0("setup__", with_profile)))
+  # P8_SHARD set: this session only computes a share of the profile pieces (see run_shard), from saved setups.
+  shard <- Sys.getenv("P8_SHARD")
+  if (nzchar(shard)) phase1 <- phase1[c("matched", paste0("setup__", with_profile))]
   one <- run_tasks(phase1, cores)
   parts_for <- function(name, setup) setNames(lapply(seq_along(setup$ps), function(i) function() profile_part(setup, i)),
                                               sprintf("part__%s__%02d", name, seq_along(setup$ps)))
@@ -356,6 +389,7 @@ run_analyses_fast <- function(monzel_items, dance_items, new, out_dir, cores, n.
     phase2$detect <- function() run_one(detect)
     phase2$setup__detect <- function() profile_setup(detect$x, n.samples, num.p)
   }
+  if (nzchar(shard)) return(run_shard(shard, phase2, parts_for, one, main_x, out_dir, cores, n.samples))
   two <- run_tasks(phase2, cores)
   attach_profile <- function(result, name, parts_from, setup) {
     columns <- parts_from[sprintf("part__%s__%02d", name, seq_along(setup$ps))]
@@ -503,6 +537,11 @@ run_p8 <- function(root, out_dir, registration, cores = parallel::detectCores())
   monzel <- load_monzel(root)
   dance <- load_dance(root)
   new <- load_new(root)
+  if (nzchar(Sys.getenv("P8_SHARD"))) {
+    done <- run_analyses_fast(monzel$items, dance$items, new, out_dir, cores)
+    cat(toJSON(list(P8 = c(list(status = "shard_done"), done)), auto_unbox = TRUE), "\n")
+    return(invisible(done))
+  }
   results <- c(list(project = "P8", registration = registration, plan_sha256 = plan_sha, seed = SEED,
                     rtaxometrics = as.character(packageVersion("RTaxometrics")), r = R.version.string, cores = cores,
                     flow = list(monzel = monzel$flow, dance = dance$flow, new = new$flow),
@@ -517,7 +556,7 @@ run_p8 <- function(root, out_dir, registration, cores = parallel::detectCores())
 # ---- self-test on simulated data (no real data) ----
 
 # The whole pipeline on simulated data, with small settings, to check the wiring (no real data).
-selftest_pipeline <- function(cores = 4, fast = FALSE) {
+selftest_pipeline <- function(cores = 4, fast = FALSE, return_results = FALSE) {
   set.seed(2)
   draw_items <- function(n, floor_share) {
     latent <- rnorm(n)
@@ -533,6 +572,7 @@ selftest_pipeline <- function(cores = 4, fast = FALSE) {
   dir.create(out_dir, showWarnings = FALSE)
   runner <- if (fast) run_analyses_fast else run_analyses
   results <- runner(monzel_items, dance_items, new, out_dir, cores, n.samples = 3, num.p = 20)
+  if (return_results || nzchar(Sys.getenv("P8_SHARD"))) return(results)
   expected <- c("matched_subsample", "item_pairs", "cutoff_23", "half_1", "half_2", "floored_continuum")
   out <- list(pipeline_keys_ok = all(expected %in% names(results$robustness)),
               detectability_present = !is.null(results$robustness$matched_detectability) ||
@@ -542,6 +582,28 @@ selftest_pipeline <- function(cores = 4, fast = FALSE) {
               graph_written = isTRUE(file.info(file.path(out_dir, "graphs_main.pdf"))$size > 1000),
               profiles_attached = !is.null(results$main$profile$ccfi) && !is.null(results$robustness$floored_continuum$combined_verdict))
   cat(toJSON(out, auto_unbox = TRUE), "\n")
+}
+
+# Shards then a full run must give exactly the same results as one full run (simulated data, fresh checkpoint folders).
+selftest_shards <- function(cores = 4) {
+  run_in <- function(shards) {
+    dir <- tempfile("p8_checkpoints_")
+    dir.create(dir)
+    Sys.setenv(P8_CHECKPOINT_DIR = dir)
+    for (shard in shards) {
+      Sys.setenv(P8_SHARD = shard)
+      selftest_pipeline(cores, fast = TRUE)
+    }
+    Sys.setenv(P8_SHARD = "")
+    before <- length(list.files(dir))
+    results <- selftest_pipeline(cores, fast = TRUE, return_results = TRUE)
+    list(results = results, saved_by_shards = before, saved_total = length(list.files(dir)))
+  }
+  one <- run_in(character())
+  split <- run_in(c("profile_size", "1/2", "2/2"))
+  same <- identical(toJSON(one$results, digits = NA), toJSON(split$results, digits = NA))
+  cat(toJSON(list(shards_match_full_run = same, profile_size_present = !is.null(one$results$robustness$profile_size),
+                  saved_by_shards = split$saved_by_shards, saved_total = split$saved_total), auto_unbox = TRUE), "\n")
 }
 
 # Split profile versus the package's RunCCFIProfile on simulated data (different random draws, same method).
@@ -605,7 +667,9 @@ value_of <- function(flag) {
   i <- match(flag, args)
   if (is.na(i) || i == length(args)) NULL else args[i + 1]
 }
-if ("--selftest" %in% args && "--agreement" %in% args) {
+if ("--selftest" %in% args && "--shards" %in% args) {
+  selftest_shards()
+} else if ("--selftest" %in% args && "--agreement" %in% args) {
   selftest_profile_agreement()
 } else if ("--selftest" %in% args && "--pipeline" %in% args) {
   selftest_pipeline(cores = if ("--fast" %in% args) 32 else 4, fast = "--fast" %in% args)

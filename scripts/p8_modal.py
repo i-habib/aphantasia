@@ -1,11 +1,17 @@
 """Run the registered P8 analysis on one Modal machine with many CPUs.
 
+No longer used: since 2026-10-13 P8 runs in free Kaggle sessions (scripts/p8_kaggle.py, p8_kaggle_push.py).
+Kept because the 11 Oct Modal runs and their saved pieces are part of the record.
+
 Same code and data as a local run (the R script checks the plan and data
 fingerprints itself); only the machine differs. Results are copied back to
 runs/latest/P8/.
 
     modal run --detach scripts/p8_modal.py --preregistration-url https://osf.io/w8xj9
     modal volume get aphantasia-p8-results latest runs/latest/P8_modal   # after it finishes, if detached
+
+    modal run --detach scripts/p8_modal.py --fast --preregistration-url https://osf.io/w8xj9   # starts run_fast and returns
+    modal volume get aphantasia-p8-results latest_fast runs/latest/P8_modal_fast               # after it finishes
 """
 from __future__ import annotations
 
@@ -67,7 +73,7 @@ def run(preregistration_url: str) -> dict[str, bytes | str]:
     return files
 
 
-@app.function(cpu=64, memory=131072, timeout=6 * 60 * 60, volumes={"/results": results})
+@app.function(cpu=64, memory=131072, timeout=24 * 60 * 60, volumes={"/results": results})
 def run_fast(preregistration_url: str) -> str:
     """Same analyses with each CCFI profile split by taxon size across cores (deviation logged). Saves to /results/latest_fast."""
     import os
@@ -122,7 +128,9 @@ def main(preregistration_url: str = "", check_only: bool = False, selftest: bool
             print(call.get())
         return
     if fast:
-        print(run_fast.remote(preregistration_url))
+        # Start it and return. Waiting here ties the run to this machine: on 2026-10-11 it was cancelled when the laptop slept.
+        call = run_fast.spawn(preregistration_url)
+        print("started run_fast", call.object_id)
         return
     files = run.remote(preregistration_url)
     target = ROOT / "runs" / "latest" / "P8"

@@ -48,6 +48,14 @@ def test_taxometrics_separate_simulated_structures() -> None:
     assert result["continuous_verdict"] == "continuum"
 
 
+@needs_r
+@pytest.mark.skipif(os.environ.get("P8_FULL_SELFTEST") != "1", reason="slow; set P8_FULL_SELFTEST=1")
+def test_shards_then_full_run_match_one_full_run() -> None:
+    result = _selftest("--shards")
+    assert result["shards_match_full_run"]
+    assert result["saved_by_shards"] > 0
+
+
 def test_run_p8_refuses_without_registration(tmp_path: Path) -> None:
     with pytest.raises(AnalysisStop) as stop:
         run_p8(ROOT, tmp_path, registration=None)  # type: ignore[arg-type]
