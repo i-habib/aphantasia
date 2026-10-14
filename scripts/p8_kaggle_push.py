@@ -43,7 +43,7 @@ def push(slug: str, title: str, shard: str, sources: list[str]) -> None:
 def main(argv: list[str]) -> int:
     if argv[:1] == ["shards"]:
         for shard in argv[1:]:
-            name = shard.replace("/", "-").replace("_", "-")
+            name = shard.replace("/", "-").replace("_", "-").replace(":", "-")
             push(f"p8-aphantasia-shard-{name}", f"P8 Aphantasia Shard {name}", shard, [])
         return 0
     if argv[:1] == ["assemble"]:

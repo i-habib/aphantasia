@@ -314,7 +314,8 @@ profile_summary <- function(setup, columns) {
 }
 
 # One share of the profile pieces, so several machines can work at once. Every piece has its own seed and is saved
-# under its own name, so a later full run reuses it and computes the same results. shard is "i/n" or "profile_size".
+# under its own name, so a later full run reuses it and computes the same results. shard is "i/n", "profile_size",
+# "detect" or "parts:<sample>:<from>-<to>".
 # "i/n" takes every n-th piece, starting from the end, because a full run works through the pieces from the start.
 # "profile_size" computes the main sample's 39 sizes and then, if the main profile reads as two groups, the
 # profile-size check. Nothing is printed; the results are only in the saved files.
@@ -328,6 +329,25 @@ run_shard <- function(shard, phase2, parts_for, one, main_x, out_dir, cores, n.s
                                                         n.samples = n.samples)), 1)
     }
     return(list(shard = shard, pieces = length(parts) + isTRUE(profile$ccfi >= CCFI_TAXONIC)))
+  }
+  if (identical(shard, "detect")) {
+    # The detectability analysis, its setup and all its sizes (the sizes are quick: the sample is small).
+    stopifnot(!is.null(phase2$setup__detect))
+    setup <- run_tasks(phase2["setup__detect"], 1)$setup__detect
+    mine <- c(phase2["detect"], parts_for("detect", setup))
+    run_tasks(mine, cores)
+    return(list(shard = shard, pieces = length(mine) + 1))
+  }
+  if (startsWith(shard, "parts:")) {
+    # "parts:<sample>:<from>-<to>": just these sizes of one sample's profile, then stop, so the session ends and its
+    # saved pieces become available sooner.
+    spec <- strsplit(sub("^parts:", "", shard), ":", fixed = TRUE)[[1]]
+    range <- as.integer(strsplit(spec[2], "-", fixed = TRUE)[[1]])
+    setup <- one[[paste0("setup__", spec[1])]]
+    stopifnot(!is.null(setup), length(range) == 2, range[1] >= 1, range[2] <= length(setup$ps), range[1] <= range[2])
+    mine <- parts_for(spec[1], setup)[range[1]:range[2]]
+    run_tasks(mine, cores)
+    return(list(shard = shard, pieces = length(mine)))
   }
   where <- as.integer(strsplit(shard, "/", fixed = TRUE)[[1]])
   stopifnot(length(where) == 2, where[1] >= 1, where[1] <= where[2])
@@ -606,6 +626,28 @@ selftest_shards <- function(cores = 4) {
                   saved_by_shards = split$saved_by_shards, saved_total = split$saved_total), auto_unbox = TRUE), "\n")
 }
 
+# Pieces from the "detect" and "parts:..." shards must be identical to the same pieces from a full run.
+selftest_piece_lists <- function(cores = 4) {
+  saved_by <- function(shards) {
+    dir <- tempfile("p8_checkpoints_")
+    dir.create(dir)
+    Sys.setenv(P8_CHECKPOINT_DIR = dir)
+    for (shard in shards) {
+      Sys.setenv(P8_SHARD = shard)
+      selftest_pipeline(cores, fast = TRUE, return_results = !nzchar(shard))
+    }
+    Sys.setenv(P8_SHARD = "")
+    dir
+  }
+  full <- saved_by("")
+  lists <- saved_by(c("detect", "parts:multisensory:3-6"))
+  names <- setdiff(list.files(lists), list.files(lists, pattern = "^setup__(main|matched|floored|dance|multisensory)\\.rds$|^matched\\.rds$"))
+  same <- vapply(names, function(f) identical(readRDS(file.path(full, f)), readRDS(file.path(lists, f))), logical(1))
+  cat(toJSON(list(pieces_compared = length(names), all_identical = all(same),
+                  detect_sizes = sum(grepl("^part__detect__", names)), multisensory_sizes = sum(grepl("^part__multisensory__", names))),
+             auto_unbox = TRUE), "\n")
+}
+
 # Split profile versus the package's RunCCFIProfile on simulated data (different random draws, same method).
 selftest_profile_agreement <- function(cores = 16) {
   pdf(NULL)
@@ -667,7 +709,9 @@ value_of <- function(flag) {
   i <- match(flag, args)
   if (is.na(i) || i == length(args)) NULL else args[i + 1]
 }
-if ("--selftest" %in% args && "--shards" %in% args) {
+if ("--selftest" %in% args && "--piece-lists" %in% args) {
+  selftest_piece_lists()
+} else if ("--selftest" %in% args && "--shards" %in% args) {
   selftest_shards()
 } else if ("--selftest" %in% args && "--agreement" %in% args) {
   selftest_profile_agreement()
