@@ -1,6 +1,6 @@
 Table 4. Observed autism group versus two whole-group models (exploratory)
 
-| Dataset and measure | Observed (95% CI) | Shift | Shift + stretch |
+| Dataset and measure | Real autism group (95% CI) | Predicted by shift | Predicted by shift + stretch |
 |---|---|---:|---:|
 | New et al.: Absent imagery in at least one sense | 20.0% (13.3% to 26.7%) | 8.3% | 12.0% |
 | New et al.: Difference at the 10th percentile (SD) | -1.30 (-1.64 to -1.11) | -0.41 | -0.76 |
@@ -11,4 +11,4 @@ Table 4. Observed autism group versus two whole-group models (exploratory)
 | Arnold et al.: Difference at the median (SD) | -0.18 (-0.32 to -0.03) | -0.23 | -0.19 |
 | Arnold et al.: Difference among people with imagery in every sense (SD) | -0.12 (-0.23 to -0.01) | -0.23 | -0.10 |
 
-Shift: every comparison respondent's score in each sense lowered by the autism-comparison mean difference for that sense. Shift + stretch: each sense also rescaled to the autism group's standard deviation. Scores were rounded and kept within the scale. Comparison-group rates of absent imagery were 6.5% (New et al.) and 4.6% (Arnold et al.). All values are unadjusted; intervals are from 2,000 bootstrap resamples of the autism group. Added after an internal review on 18 October 2026, after all other results were known.
+This table asks whether a simple change to the comparison group's scores could reproduce the real autism group. Shift: every comparison respondent's score in each sense was lowered by the average difference between the groups in that sense. Shift + stretch: scores were also spread out to match the autism group's variability. Scores were rounded and kept within the questionnaire's range. If a prediction is close to the real value, a simple shift or spread is enough to explain the result; if not, a separate subgroup is more likely. For comparison, 6.5% (New et al.) and 4.6% (Arnold et al.) of the comparison groups had absent imagery in at least one sense. All values are unadjusted. Intervals come from resampling the autism group 2,000 times (bootstrap). Added after an internal review on 18 October 2026, after all other results were known.

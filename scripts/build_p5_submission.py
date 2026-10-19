@@ -170,13 +170,13 @@ def main():
           "| Age, mean (SD) | " + " | ".join(f"{float(lookup('Age (years)', g)['mean']):.1f} ({float(lookup('Age (years)', g)['sd']):.1f})" for g in groups) + " |",
           "| Overall imagery, mean (SD) | " + " | ".join(f"{float(lookup('Registered composite (comparison SD)', g)['mean']):+.2f} ({float(lookup('Registered composite (comparison SD)', g)['sd']):.2f})" for g in groups) + " |",
           "| Absent imagery in at least one sense | " + " | ".join(f"{absent_any[g]:.1f}%" for g in groups) + " |",
-          "", "Overall imagery is in comparison-group standard deviations, so the comparison group has mean 0 and SD 1. Absent imagery means the lowest possible score in a sense. Sex was recorded as female, male or other; two respondents in these groups chose other. Ages ranged from 18 to 32: New et al.'s eligibility was 18-30, but three retained respondents gave older ages. One comparison respondent had no recorded age. Table S1 gives each sense's raw score."]
+          "", "Overall imagery is measured in comparison-group standard deviations, so the comparison group has an average of 0 and a standard deviation (SD) of 1; negative values mean weaker imagery than the comparison group's average. A larger SD means scores are more spread out. Absent imagery means the lowest possible score in a sense. Sex was recorded as female, male or other; two respondents in these groups chose other. Ages ranged from 18 to 32: New et al.'s eligibility was 18 to 30, but three respondents gave older ages. One comparison respondent had no recorded age. Table S1 gives the raw score for each sense."]
     (OUT / "table_main1_participants.md").write_text("\n".join(t1) + "\n")
 
     # Main Table 2: registered tests.
     names = dict(zip(diagnostics["primary_sequence"], ["H1. Overall imagery, autism vs comparison", "H2a. Absent smell imagery", "H2b. Absent taste imagery"]))
     t2 = ["Table 2. Registered tests in New et al.'s survey", "",
-          "| Test | Estimate (95% CI) | One-sided p | Holm-adjusted p | Supported |", "|---|---|---:|---:|---|"]
+          "| Test | Estimate (95% CI) | p (main tests) | p corrected for multiple tests | Supported |", "|---|---|---:|---:|---|"]
     for r in table:
         scale = "SD" if "general" in r["hypothesis"] else "OR"
         value = float(r["estimate"])
@@ -194,7 +194,7 @@ def main():
         else:
             text = f"chi-square {secondary['S1_modality_profile_asd']['omnibus_group_by_modality_wald_chi2']:.2f}, 5 df"
         t2.append(f"| {short_labels[label]}. {definition} | {text} | - | {pval(q)} | {'Yes' if q < .05 else 'No'} |")
-    t2 += ["", "H1-H2b are the primary tests, run in a fixed order with one-sided p values. S1-S4 are secondary tests with two-sided, Holm-adjusted p values. Their confidence intervals are not adjusted for multiple tests, so an interval can exclude zero (as for S2) while the adjusted test is not significant. All models adjust for age and sex. SD: comparison-group standard deviations. OR: odds ratio. n = 898 for H1-H2b, S1 and S3; 982 for S2; 832 for S4."]
+    t2 += ["", "H1 to H2b are the three main tests. They were run in a fixed order and each looked for a difference in the predicted direction only (one-sided p). S1 to S4 are the secondary tests. Their p values are corrected for running five tests (Holm's method), so a test can have a 95% confidence interval that excludes zero, as S2 does, and still not be significant after correction. All models adjust for age and sex. SD: difference in comparison-group standard deviations. OR: odds ratio, how many times higher the odds of absent imagery were in the autism group. Number of people: 898 for H1 to H2b, S1 and S3; 982 for S2; 832 for S4."]
     (OUT / "table_main2_registered.md").write_text("\n".join(t2) + "\n")
 
     # Main Table 3: exploratory, where the gap sits.
@@ -208,12 +208,12 @@ def main():
         t3.append(f"| Difference at the {q[1:]}th percentile (SD) | {est(explore['E3_adjusted_quantile_regression'][q])} | {est(arnold['E3_adjusted_quantile_regression'][q])} |")
     key = "E3_H1_among_people_with_imagery_in_all_six_senses"
     t3 += [f"| Difference among people with imagery in every sense (SD) | {est(explore[key])}, n = {explore[key]['n']} | {est(arnold[key])}, n = {arnold[key]['n']} |",
-           "", f"The first row gives percentages. The other rows are autism-minus-comparison differences, adjusted for age and sex, with 95% confidence intervals. Percentile differences come from quantile regression. Each dataset uses its own six senses and is standardised against its own comparison group; Arnold et al.'s sixth sense is bodily sensation rather than movement. Groups: New et al., 150 autism and 749 comparison (898 with age recorded); Arnold et al., 327 and 327. These analyses were not registered."]
+           "", f"The first row compares percentages with Fisher's exact test. The other rows are differences between the autism and comparison groups, adjusted for age and sex, with 95% confidence intervals. Negative values mean the autism group scored lower. A percentile difference compares the groups at the same point in their range of scores: the 10th percentile compares the lowest-scoring 10% of each group, and the 50th percentile (median) compares the middle of each group. These were estimated with quantile regression. Each dataset uses its own six senses and is measured against its own comparison group; Arnold et al.'s sixth sense is bodily sensation rather than movement. Groups: New et al., 150 autism and 749 comparison (898 with age recorded); Arnold et al., 327 and 327. These analyses were not part of the registered plan."]
     (OUT / "table_main3_tails.md").write_text("\n".join(t3) + "\n")
 
     # Main Table 4 (exploratory): what a whole-group shift would predict.
     t4 = ["Table 4. Observed autism group versus two whole-group models (exploratory)", "",
-          "| Dataset and measure | Observed (95% CI) | Shift | Shift + stretch |", "|---|---|---:|---:|"]
+          "| Dataset and measure | Real autism group (95% CI) | Predicted by shift | Predicted by shift + stretch |", "|---|---|---:|---:|"]
     rows4 = [("Absent imagery in at least one sense", "any_absent_pct", "{:.1f}%"), ("Difference at the 10th percentile (SD)", "q10", "{:+.2f}"),
              ("Difference at the median (SD)", "q50", "{:+.2f}"), ("Difference among people with imagery in every sense (SD)", "all_present_difference", "{:+.2f}")]
     for study, title in (("new", "New et al."), ("arnold", "Arnold et al.")):
@@ -221,7 +221,7 @@ def main():
         for name, k, f in rows4:
             low, high = b["observed_bootstrap_ci95"][k]
             t4.append(f"| {title}: {name} | {f.format(b['observed_autism'][k])} ({f.format(low)} to {f.format(high)}) | {f.format(b['predicted_shift'][k])} | {f.format(b['predicted_shift_plus_stretch'][k])} |")
-    t4 += ["", f"Shift: every comparison respondent's score in each sense lowered by the autism-comparison mean difference for that sense. Shift + stretch: each sense also rescaled to the autism group's standard deviation. Scores were rounded and kept within the scale. Comparison-group rates of absent imagery were {bench['new']['comparison']['any_absent_pct']:.1f}% (New et al.) and {bench['arnold']['comparison']['any_absent_pct']:.1f}% (Arnold et al.). All values are unadjusted; intervals are from 2,000 bootstrap resamples of the autism group. Added after an internal review on 18 October 2026, after all other results were known."]
+    t4 += ["", f"This table asks whether a simple change to the comparison group's scores could reproduce the real autism group. Shift: every comparison respondent's score in each sense was lowered by the average difference between the groups in that sense. Shift + stretch: scores were also spread out to match the autism group's variability. Scores were rounded and kept within the questionnaire's range. If a prediction is close to the real value, a simple shift or spread is enough to explain the result; if not, a separate subgroup is more likely. For comparison, {bench['new']['comparison']['any_absent_pct']:.1f}% (New et al.) and {bench['arnold']['comparison']['any_absent_pct']:.1f}% (Arnold et al.) of the comparison groups had absent imagery in at least one sense. All values are unadjusted. Intervals come from resampling the autism group 2,000 times (bootstrap). Added after an internal review on 18 October 2026, after all other results were known."]
     (OUT / "table_main4_benchmark.md").write_text("\n".join(t4) + "\n")
 
     # Supplement.

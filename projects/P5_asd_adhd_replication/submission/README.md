@@ -6,7 +6,7 @@ The affiliation is Independent researcher. The author reports no ethics approval
 
 ## Read first
 
-- [Working manuscript](manuscript_working.md): editable Methods/Results, author-writing outlines for the abstract, introduction and discussion, limitations and incomplete declarations. Review PDF: `output/pdf/p5_submission_review.pdf` at the repository root; it includes the supplement and both figures.
+- [Manuscript](cortex/manuscript_cortex.md): the current text, set up as a Cortex Research Report. It is the single source for the Word files, the submission PDF and the preprint PDF.
 - [Author confirmations](author_confirmations.md): contact, ethics documentation, source reuse, reviewer access to registration, declarations and human review. Includes an **unsent** inquiry draft.
 - [Audit report](../review/submission_audit_2026-10-17.md): evidence, changes and remaining gates.
 - [PDF cold read](../review/pdf_cold_read_2026-10-17.md): independent reading of the initial PDF and how the reporting gaps were addressed.
