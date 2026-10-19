@@ -1,0 +1,10 @@
+{
+  "path": "/Users/ivanhabib/aphantasia/output/pdf/p5_submission_review.pdf",
+  "sha256": "0cedc5beaf83151b0871ad5d0b34747459c0aa760b28b2905f77c7952ce4444c",
+  "pages": 14,
+  "text_bounds_issues": [],
+  "replacement_glyphs": false,
+  "visual_review": "All pages inspected via rendered contact sheets; final table/figure pages 11-13 additionally inspected at larger size.",
+  "renderer": "PyMuPDF; bundled Poppler fallback failed due to fontconfig configuration.",
+  "status": "Working copy, not submission-ready; author/source gates remain."
+}

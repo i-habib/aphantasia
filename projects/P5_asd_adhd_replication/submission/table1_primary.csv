@@ -1,0 +1,4 @@
+hypothesis,estimate,ci95_low,ci95_high,n_complete_cases,p_one_sided_registered,passed_fixed_sequence,effect_scale
+H1_general_imagery_shift,-0.4221341796095879,-0.65792526565672,-0.18634309356245574,898,0.000232078993974353,True,mean_difference_HC3
+H2a_smell_absence,2.6911270201370954,1.420189690271218,5.09943473616465,898,0.0012001461984355085,True,odds_ratio_Firth_model_based
+H2b_taste_absence,3.8122573686382495,2.0013585202486297,7.261720525181641,898,2.3478851650512026e-05,True,odds_ratio_Firth_model_based

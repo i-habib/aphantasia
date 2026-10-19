@@ -1,0 +1,134 @@
+{
+  "status": "passed",
+  "registration": "https://osf.io/87udm",
+  "plan_sha256": "ce102d64229b6a4efb2a7c646048f17c5ab338829f73bed4121bcc1deb147c14",
+  "production_outputs_unchanged": true,
+  "reproduction_rows": 156,
+  "reproduction_max_absolute_difference": 0.0,
+  "H1_matches_statsmodels_HC3": true,
+  "Holm_matches_statsmodels": true,
+  "Firth_reference": {
+    "package": "brglm2",
+    "version": "1.1.1",
+    "R": "R version 4.6.1 (2026-06-24)",
+    "type": "AS_mean"
+  },
+  "Firth_checks": [
+    {
+      "model": "H2a_smell_absence",
+      "reference_converged": true,
+      "max_abs_beta_difference": 8.363393488863835e-08,
+      "max_abs_covariance_difference": 1.898910317876812e-08,
+      "reference_group_OR": 2.691127003557973,
+      "reference_group_se_log_odds": 0.3261129443761402,
+      "reference_group_ci95_Wald": [
+        1.4201896803947751,
+        5.099434708795929
+      ],
+      "reference_group_p_two_sided_Wald": 0.002400292577247437,
+      "production_gradient_max_abs": 2.7860825468906114e-07
+    },
+    {
+      "model": "H2b_taste_absence",
+      "reference_converged": true,
+      "max_abs_beta_difference": 3.235662604517131e-08,
+      "max_abs_covariance_difference": 8.496538850266688e-08,
+      "reference_group_OR": 3.8122573640843367,
+      "reference_group_se_log_odds": 0.32877914720991913,
+      "reference_group_ci95_Wald": [
+        2.001358520669195,
+        7.2617205063067605
+      ],
+      "reference_group_p_two_sided_Wald": 4.695770224492115e-05,
+      "production_gradient_max_abs": 5.1228179103191e-06
+    },
+    {
+      "model": "S3_visual_absence_asd",
+      "reference_converged": true,
+      "max_abs_beta_difference": 3.7464705360257256e-07,
+      "max_abs_covariance_difference": 8.45656590531263e-07,
+      "reference_group_OR": 2.837199350100514,
+      "reference_group_se_log_odds": 0.40918940672659204,
+      "reference_group_ci95_Wald": [
+        1.2722931742256751,
+        6.326922375505057
+      ],
+      "reference_group_p_two_sided_Wald": 0.01081886374631346,
+      "production_gradient_max_abs": 8.145397458747539e-07
+    },
+    {
+      "model": "SENS_asd_without_adhd_smell_absence",
+      "reference_converged": true,
+      "max_abs_beta_difference": 1.001522509369579e-08,
+      "max_abs_covariance_difference": 2.770638829474592e-09,
+      "reference_group_OR": 2.8711205051930175,
+      "reference_group_se_log_odds": 0.36441646620748236,
+      "reference_group_ci95_Wald": [
+        1.4055929248945156,
+        5.8646659422808645
+      ],
+      "reference_group_p_two_sided_Wald": 0.0038009859151950957,
+      "production_gradient_max_abs": 2.7311346428859906e-07
+    },
+    {
+      "model": "SENS_asd_without_adhd_taste_absence",
+      "reference_converged": true,
+      "max_abs_beta_difference": 8.485908642441586e-09,
+      "max_abs_covariance_difference": 1.6204140251829813e-09,
+      "reference_group_OR": 3.9100038567487143,
+      "reference_group_se_log_odds": 0.3672265539416628,
+      "reference_group_ci95_Wald": [
+        1.9036774975528243,
+        8.030840402033801
+      ],
+      "reference_group_p_two_sided_Wald": 0.00020475920952318515,
+      "production_gradient_max_abs": 3.774786705434963e-09
+    }
+  ],
+  "R_stderr": "",
+  "inference_note": "Reference matches the registered implementation's Wald inference; profile-likelihood intervals were not substituted.",
+  "source_flow": {
+    "source": "New et al. (2026) Study 2, OSF 2bdn6, Analyses/Exp3.1020.txt",
+    "source_rows": 1020,
+    "published_analysis_n": 1003,
+    "group_counts": {
+      "reference": 749,
+      "asd": 150,
+      "adhd_only": 84,
+      "other_ndd_only": 20,
+      "unspecified_ndd": 0
+    },
+    "asd_with_adhd": 46,
+    "asd_without_adhd": 104,
+    "unlisted_condition_text": 0,
+    "age_missing": 1,
+    "gate_item": "Have you ever been diagnosed with, or strongly suspected to have, a neurodevelopmental disorder such as ASD, ADHD, or a learning disability?",
+    "checklist_item": "Which one(s)? (multi-select: ASD, ADHD, Dyslexia, Dyscalculia, Dysgraphia, Language Disorder, Dyspraxia, Other)",
+    "modality_crosswalk": {
+      "visual": "image",
+      "auditory": "sound",
+      "smell": "smell",
+      "taste": "taste",
+      "touch": "touch",
+      "movement": "motor",
+      "emotion": "emotion",
+      "voice": "voice",
+      "interoception": "intstate"
+    }
+  },
+  "original_output_sha256": {
+    "p5_estimates.csv": "727f9e8b600d96d52aaae306f72bc6316246b6e55338d74721327251721aa809",
+    "p5_exploratory.json": "92c8356c1a11f2d1357e6dd44147ce4a2416d0e7505bc2380b64afdc49ddc2b1",
+    "p5_power_plan.json": "4b4e92cba30c4c89d60ef6e81ab59dfb4e62768fea514a98e23192d797c5930d",
+    "p5_figure_tails.pdf": "46ca65e5fb67aca84135319051cc08d3eb53ad9bff42afc981ac0146c1a00030",
+    "p5_figure_tails.png": "ca0682fed2d687099b575794efdb086e9cf5f2c06e8c645735de7bc991daf9a8",
+    "p5_dance_traits.json": "3de6637cc516651154f301d7d86d6f7a206114b2891d1f2388e094df15317b4f",
+    "p5_source_flow.json": "8c1bd2cd92de6e447e464bb49e03c3618ea7c0e3ad1095f19d6cebb6272be6c4",
+    "p5_diagnostics.json": "53e880812c805de85a9dec92e6f9781722637a666fae4c450d235f48dfa0ef3a"
+  },
+  "versions": {
+    "python": "3.14.7",
+    "numpy": "2.4.6",
+    "pandas": "2.3.3"
+  }
+}

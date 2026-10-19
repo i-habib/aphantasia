@@ -1,0 +1,39 @@
+{
+  "role": "post-registration measurement sensitivity; results already seen before specification",
+  "reason": "Arnold PSI-Q bodily sensation and New QMI motor imagery are not the same construct.",
+  "New": {
+    "n": 898,
+    "adjusted_difference_reference_SD": -0.4349111136513054,
+    "se_HC3": 0.11909198894961347,
+    "ci95": [
+      -0.6686439148826662,
+      -0.20117831241994463
+    ],
+    "p_two_sided_exploratory": 0.0002754578448135386,
+    "modalities": [
+      "visual",
+      "auditory",
+      "smell",
+      "taste",
+      "touch"
+    ]
+  },
+  "Arnold": {
+    "n": 654,
+    "adjusted_difference_reference_SD": -0.19920382154843236,
+    "se_HC3": 0.09078475016537522,
+    "ci95": [
+      -0.37747111433655944,
+      -0.020936528760305273
+    ],
+    "p_two_sided_exploratory": 0.028571635583274326,
+    "modalities": [
+      "visual",
+      "auditory",
+      "smell",
+      "taste",
+      "touch"
+    ]
+  },
+  "participant_rows_written": false
+}

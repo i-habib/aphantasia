@@ -1,0 +1,491 @@
+{
+  "alpha_one_sided": 0.05,
+  "contains_participant_rows": false,
+  "details": {
+    "H1_interpretation": "replicated",
+    "cross_study": {
+      "chemosensory_minus_visual": {
+        "arnold": {
+          "estimate": -0.1283170105229252,
+          "one_sided_p_negative": 0.02447861929469319,
+          "se": 0.06514948808207921
+        },
+        "difference_p_two_sided": 0.16054899384326793,
+        "new": {
+          "estimate": 0.027392021731693417,
+          "one_sided_p_negative": 0.6197898696828881,
+          "se": 0.08982626304155417
+        }
+      },
+      "general_imagery_shift": {
+        "arnold": {
+          "estimate": -0.18045555261030696,
+          "se": 0.09091870501311043
+        },
+        "difference_new_minus_arnold": -0.24167862699928092,
+        "difference_p_two_sided": 0.10869704229801928,
+        "new": {
+          "estimate": -0.4221341796095879,
+          "se": 0.12014073020990565
+        }
+      },
+      "pooling": "none; two cohorts with different instruments and recruitment are shown side by side",
+      "small_telescope_H1": {
+        "d33_reference_sd": 0.13903621908098024,
+        "one_sided_p_new_effect_smaller_than_d33": 0.9907731399005507,
+        "smaller_than_d33": false
+      }
+    },
+    "descriptive": [
+      {
+        "absent_group": 9,
+        "absent_reference": 17,
+        "g": -0.355902313389025,
+        "group": "asd",
+        "modality": "visual",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": 10,
+        "absent_reference": 8,
+        "g": -0.38138190751626644,
+        "group": "asd",
+        "modality": "auditory",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": 15,
+        "absent_reference": 29,
+        "g": -0.2895869329664923,
+        "group": "asd",
+        "modality": "smell",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": 17,
+        "absent_reference": 23,
+        "g": -0.36997184060465,
+        "group": "asd",
+        "modality": "taste",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": 10,
+        "absent_reference": 15,
+        "g": -0.3061354425921578,
+        "group": "asd",
+        "modality": "touch",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": 12,
+        "absent_reference": 16,
+        "g": -0.2683695211848777,
+        "group": "asd",
+        "modality": "movement",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": 13,
+        "absent_reference": 13,
+        "g": -0.41096676040242547,
+        "group": "asd",
+        "modality": "emotion",
+        "role": "exploratory"
+      },
+      {
+        "absent_group": 6,
+        "absent_reference": 7,
+        "g": -0.2557658856014501,
+        "group": "asd",
+        "modality": "voice",
+        "role": "exploratory"
+      },
+      {
+        "absent_group": 9,
+        "absent_reference": 11,
+        "g": -0.3632513960037343,
+        "group": "asd",
+        "modality": "interoception",
+        "role": "exploratory"
+      },
+      {
+        "absent_group": "<5",
+        "absent_reference": 17,
+        "g": -0.08287086326198366,
+        "group": "adhd_only",
+        "modality": "visual",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": "<5",
+        "absent_reference": 8,
+        "g": -0.056911499208654126,
+        "group": "adhd_only",
+        "modality": "auditory",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": 6,
+        "absent_reference": 29,
+        "g": -0.059748021962994426,
+        "group": "adhd_only",
+        "modality": "smell",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": "<5",
+        "absent_reference": 23,
+        "g": -0.05594042817518696,
+        "group": "adhd_only",
+        "modality": "taste",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": "<5",
+        "absent_reference": 15,
+        "g": -0.08681597965528182,
+        "group": "adhd_only",
+        "modality": "touch",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": "<5",
+        "absent_reference": 16,
+        "g": 0.007588381073403423,
+        "group": "adhd_only",
+        "modality": "movement",
+        "role": "descriptive"
+      },
+      {
+        "absent_group": "<5",
+        "absent_reference": 13,
+        "g": 0.10947588728599578,
+        "group": "adhd_only",
+        "modality": "emotion",
+        "role": "exploratory"
+      },
+      {
+        "absent_group": "<5",
+        "absent_reference": 7,
+        "g": 0.08650990154725861,
+        "group": "adhd_only",
+        "modality": "voice",
+        "role": "exploratory"
+      },
+      {
+        "absent_group": "<5",
+        "absent_reference": 11,
+        "g": -0.028821542037132445,
+        "group": "adhd_only",
+        "modality": "interoception",
+        "role": "exploratory"
+      }
+    ],
+    "primary": {
+      "H1_general_imagery_shift": {
+        "confirmatory_support": true,
+        "covariance": "HC3",
+        "design_rank": 5,
+        "df_resid": 893,
+        "estimate": -0.4221341796095879,
+        "n": 898,
+        "one_sided_p": 0.000232078993974353,
+        "predicted": "negative",
+        "se": 0.12014073020990565,
+        "tested_confirmatorily": true
+      },
+      "H2a_smell_absence": {
+        "absent_counts": {
+          "in_group=0": {
+            "absent": 29,
+            "n": 749
+          },
+          "in_group=1": {
+            "absent": 15,
+            "n": 150
+          }
+        },
+        "ci95": [
+          1.420189690271218,
+          5.09943473616465
+        ],
+        "complete_case_n": 898,
+        "confirmatory_support": true,
+        "covariance": "model-based expected information",
+        "events": 44,
+        "fallback_reason": "singular_logit",
+        "gradient_max_abs": 2.7860825468906114e-07,
+        "method": "Firth bias-reduced logistic",
+        "missing_before_complete_case": {
+          "absent_smell": 0,
+          "age": 1,
+          "in_group": 0,
+          "sex_gender": 0
+        },
+        "n": 898,
+        "non_events": 854,
+        "odds_ratio": 2.6911270201370954,
+        "one_sided_p": 0.0012001461984355085,
+        "optimizer": "Desired error not necessarily achieved due to precision loss.",
+        "outcome_no": 854,
+        "outcome_yes": 44,
+        "predicted": "odds ratio > 1",
+        "tested_confirmatorily": true
+      },
+      "H2b_taste_absence": {
+        "absent_counts": {
+          "in_group=0": {
+            "absent": 23,
+            "n": 749
+          },
+          "in_group=1": {
+            "absent": 17,
+            "n": 150
+          }
+        },
+        "ci95": [
+          2.0013585202486297,
+          7.261720525181641
+        ],
+        "complete_case_n": 898,
+        "confirmatory_support": true,
+        "covariance": "model-based expected information",
+        "events": 40,
+        "fallback_reason": "singular_logit",
+        "gradient_max_abs": 5.1228179103191e-06,
+        "method": "Firth bias-reduced logistic",
+        "missing_before_complete_case": {
+          "absent_taste": 0,
+          "age": 1,
+          "in_group": 0,
+          "sex_gender": 0
+        },
+        "n": 898,
+        "non_events": 858,
+        "odds_ratio": 3.8122573686382495,
+        "one_sided_p": 2.3478851650512026e-05,
+        "optimizer": "Desired error not necessarily achieved due to precision loss.",
+        "outcome_no": 858,
+        "outcome_yes": 40,
+        "predicted": "odds ratio > 1",
+        "tested_confirmatorily": true
+      }
+    },
+    "secondary": {
+      "S1_modality_profile_asd": {
+        "chemosensory_minus_visual": {
+          "estimate": 0.027392021731693417,
+          "one_sided_p_negative": 0.6197898696828881,
+          "se": 0.08982626304155417
+        },
+        "clusters": 898,
+        "covariance": "participant-clustered sandwich (CR1)",
+        "n": 5388,
+        "nuisance_age_and_sex_by_modality": false,
+        "omnibus_df": 5,
+        "omnibus_group_by_modality_wald_chi2": 4.340633223888679,
+        "omnibus_p": 0.501484926806725,
+        "rank": 15
+      },
+      "S2_specificity_three_group": {
+        "adhd_only_vs_reference": {
+          "estimate": -0.06512526406842253,
+          "se": 0.13235283529462658
+        },
+        "asd_minus_adhd_only": {
+          "estimate": -0.3577699398293067,
+          "se": 0.1715905899683724
+        },
+        "covariance": "HC3",
+        "design_rank": 6,
+        "df_resid": 976,
+        "n": 982
+      },
+      "S3_visual_absence_asd": {
+        "absent_counts": {
+          "in_group=0": {
+            "absent": 17,
+            "n": 749
+          },
+          "in_group=1": {
+            "absent": 9,
+            "n": 150
+          }
+        },
+        "complete_case_n": 898,
+        "covariance": "model-based expected information",
+        "events": 26,
+        "fallback_reason": "singular_logit",
+        "gradient_max_abs": 8.145397458747539e-07,
+        "method": "Firth bias-reduced logistic",
+        "missing_before_complete_case": {
+          "absent_visual": 0,
+          "age": 1,
+          "in_group": 0,
+          "sex_gender": 0
+        },
+        "n": 898,
+        "non_events": 872,
+        "optimizer": "Desired error not necessarily achieved due to precision loss.",
+        "outcome_no": 872,
+        "outcome_yes": 26
+      },
+      "S4_modality_profile_adhd_only": {
+        "chemosensory_minus_visual": {
+          "estimate": 0.023261932565185273,
+          "one_sided_p_negative": 0.6015570045583403,
+          "se": 0.09037513070222744
+        },
+        "clusters": 832,
+        "covariance": "participant-clustered sandwich (CR1)",
+        "n": 4992,
+        "nuisance_age_and_sex_by_modality": false,
+        "omnibus_df": 5,
+        "omnibus_group_by_modality_wald_chi2": 1.2885932417178336,
+        "omnibus_p": 0.9361010377894821,
+        "rank": 15
+      },
+      "holm_adjusted_p": {
+        "S1_chemosensory_minus_visual": 1.0,
+        "S1_omnibus": 1.0,
+        "S2_asd_minus_adhd_only": 0.1493072900714841,
+        "S3_visual_absence": 0.05409426384199022,
+        "S4_adhd_chemosensory_minus_visual": 1.0
+      },
+      "two_sided_p": {
+        "S1_chemosensory_minus_visual": 0.7604202606342239,
+        "S1_omnibus": 0.501484926806725,
+        "S2_asd_minus_adhd_only": 0.037326822517871026,
+        "S3_visual_absence": 0.010818852768398043,
+        "S4_adhd_chemosensory_minus_visual": 0.7968859908833195
+      }
+    },
+    "sensitivity": {
+      "SENS_age_18_30": {
+        "covariance": "HC3",
+        "design_rank": 5,
+        "df_resid": 890,
+        "estimate": -0.42096048645803374,
+        "n": 895,
+        "se": 0.1201195630703422
+      },
+      "SENS_asd_without_adhd": {
+        "covariance": "HC3",
+        "design_rank": 5,
+        "df_resid": 847,
+        "estimate": -0.3894771019510472,
+        "n": 852,
+        "se": 0.13342156473151934
+      },
+      "SENS_asd_without_adhd_smell_absence": {
+        "absent_counts": {
+          "in_group=0": {
+            "absent": 29,
+            "n": 749
+          },
+          "in_group=1": {
+            "absent": 11,
+            "n": 104
+          }
+        },
+        "complete_case_n": 852,
+        "covariance": "model-based expected information",
+        "events": 40,
+        "fallback_reason": "singular_logit",
+        "gradient_max_abs": 2.7311346428859906e-07,
+        "method": "Firth bias-reduced logistic",
+        "missing_before_complete_case": {
+          "absent_smell": 0,
+          "age": 1,
+          "in_group": 0,
+          "sex_gender": 0
+        },
+        "n": 852,
+        "non_events": 812,
+        "optimizer": "Desired error not necessarily achieved due to precision loss.",
+        "outcome_no": 812,
+        "outcome_yes": 40
+      },
+      "SENS_asd_without_adhd_taste_absence": {
+        "absent_counts": {
+          "in_group=0": {
+            "absent": 23,
+            "n": 749
+          },
+          "in_group=1": {
+            "absent": 12,
+            "n": 104
+          }
+        },
+        "complete_case_n": 852,
+        "covariance": "model-based expected information",
+        "events": 35,
+        "fallback_reason": "singular_logit",
+        "gradient_max_abs": 3.774786705434963e-09,
+        "method": "Firth bias-reduced logistic",
+        "missing_before_complete_case": {
+          "absent_taste": 0,
+          "age": 1,
+          "in_group": 0,
+          "sex_gender": 0
+        },
+        "n": 852,
+        "non_events": 817,
+        "optimizer": "Optimization terminated successfully.",
+        "outcome_no": 817,
+        "outcome_yes": 35
+      },
+      "SENS_modality_profile_nuisance": {
+        "chemosensory_minus_visual": {
+          "estimate": 0.04455210039734092,
+          "one_sided_p_negative": 0.6930545406904449,
+          "se": 0.08829947755965477
+        },
+        "clusters": 898,
+        "covariance": "participant-clustered sandwich (CR1)",
+        "n": 5388,
+        "nuisance_age_and_sex_by_modality": true,
+        "omnibus_df": 5,
+        "omnibus_group_by_modality_wald_chi2": 3.958431711252976,
+        "omnibus_p": 0.55541619619051,
+        "rank": 30
+      },
+      "SENS_raw_score_composite": {
+        "covariance": "HC3",
+        "design_rank": 5,
+        "df_resid": 893,
+        "estimate": -2.2161805142322994,
+        "n": 898,
+        "se": 0.6319185281353796
+      },
+      "SENS_unadjusted": {
+        "covariance": "HC3",
+        "design_rank": 2,
+        "df_resid": 897,
+        "estimate": -0.42786948189654006,
+        "n": 899,
+        "se": 0.12050727863476972
+      }
+    }
+  },
+  "estimate_rows": 156,
+  "floor_score": 5,
+  "primary_sequence": [
+    "H1_general_imagery_shift",
+    "H2a_smell_absence",
+    "H2b_taste_absence"
+  ],
+  "project": "P5",
+  "registration": {
+    "plan_sha256": "ce102d64229b6a4efb2a7c646048f17c5ab338829f73bed4121bcc1deb147c14",
+    "url": "https://osf.io/87udm"
+  },
+  "sample_sizes": {
+    "adhd_only": 84,
+    "asd": 150,
+    "other_ndd_only": 20,
+    "reference": 749
+  },
+  "status": "complete"
+}

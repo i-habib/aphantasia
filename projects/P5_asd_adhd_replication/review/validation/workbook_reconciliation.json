@@ -1,0 +1,44 @@
+{
+  "workbook_sha256": "8b7e9ae65b15010142fee5116e5e6dd533967300d4a59c03b298b597a5c986f0",
+  "workbook_rows": 414,
+  "workbook_header_columns": 237,
+  "workbook_numeric_six_score_rows": 405,
+  "code_autism_rows": 327,
+  "missing_code_score_vectors_from_workbook_multiset": 0,
+  "missing_code_score_AQ_age_vectors_from_workbook_multiset": 0,
+  "attention_distribution_numeric_score_rows": {
+    "13": 327,
+    "AVG": 1,
+    "SD": 1,
+    "12": 34,
+    "11": 10,
+    "10": 1,
+    "9": 2,
+    "8": 3,
+    "7": 13,
+    "6": 8,
+    "5": 4,
+    "4": 1
+  },
+  "attention_distribution_matched_code_rows": {
+    "13": 327
+  },
+  "score_columns": {
+    "PSIQ - V": "HC",
+    "PSIQ - A": "HD",
+    "PSIQ - S": "HE",
+    "PSIQ - Tas": "HF",
+    "PSIQ - Tou": "HG",
+    "PSIQ - B": "HH"
+  },
+  "body_item_headers": [
+    "Imagine the bodily sensation of... - Relaxing in a warm bath",
+    "Imagine the bodily sensation of... - Walking briskly in the cold",
+    "Imagine the bodily sensation of... - Jumping in a swimming pool",
+    "Imagine the bodily sensation of... - Having a sore throat",
+    "Imagine the bodily sensation of... - Threading a needle"
+  ],
+  "control_provenance": "Not established by this autism-only workbook; full source methods still needed.",
+  "participant_rows_written": false,
+  "interpretation": "Numerical multiset matching establishes score provenance, not participant identities or independent recruitment."
+}

@@ -1,0 +1,6 @@
+test,definition,estimate,ci95_low_unadjusted,ci95_high_unadjusted,effect_scale,p_two_sided,p_Holm_adjusted,supported_at_05
+S1_chemosensory_minus_visual,Autism: smell/taste difference minus sight difference,0.027392021731693417,-0.1487038873079433,0.20348793077133012,contrast_clustered,0.7604202606342239,1.0,False
+S1_omnibus,Autism: difference varies across the six senses,4.340633223888679,,,chi_square_df5,0.501484926806725,1.0,False
+S2_asd_minus_adhd_only,"Autism minus ADHD-only, overall score",-0.3577699398293067,-0.6944988942289391,-0.021040985429674364,contrast_HC3,0.037326822517871026,0.1493072900714841,False
+S3_visual_absence,"Absent visual imagery, autism vs comparison",2.8371997028402087,1.2722933524613134,6.326923062377108,odds_ratio_Firth_model_based,0.010818852768398043,0.05409426384199022,False
+S4_adhd_chemosensory_minus_visual,ADHD-only: smell/taste difference minus sight difference,0.023261932565185273,-0.15391315602781047,0.20043702115818102,contrast_clustered,0.7968859908833195,1.0,False
