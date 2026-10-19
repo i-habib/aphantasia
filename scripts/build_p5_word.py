@@ -1,6 +1,6 @@
-"""Render the P5 Brain Sciences manuscript and supplement as Word files (free-format MDPI submission).
+"""Render the P5 Cortex manuscript and supplement as Word files.
 
-Reads projects/P5_asd_adhd_replication/submission/brainsci/manuscript_brainsci.md and
+Reads projects/P5_asd_adhd_replication/submission/cortex/manuscript_cortex.md and
 submission/supplement.md, resolving [INCLUDE table.md] and [FIGURE file.png | caption] markers.
 Requires python-docx. Run build_p5_submission.py first so tables and figures are current.
 """
@@ -15,8 +15,8 @@ from docx.shared import Inches, Pt
 
 ROOT = Path(__file__).resolve().parents[1]
 SUBMISSION = ROOT / "projects/P5_asd_adhd_replication/submission"
-OUT = SUBMISSION / "brainsci"
-FONT = "Palatino Linotype"
+OUT = SUBMISSION / "cortex"
+FONT = "Times New Roman"
 
 
 def add_runs(paragraph, text, size=None):
@@ -111,11 +111,10 @@ def render(source_text, target, title_style=True):
 
 
 def main():
-    render((OUT / "manuscript_brainsci.md").read_text(), OUT / "manuscript_brainsci.docx")
+    render((OUT / "manuscript_cortex.md").read_text(), OUT / "manuscript_cortex.docx")
     supplement = (SUBMISSION / "supplement.md").read_text().replace("# Supplementary material",
-        "# Supplementary Materials: Autistic Adults More Often Report Absent Sensory Imagery", 1)
-    render(supplement, OUT / "supplementary_materials.docx")
-    render((OUT / "cover_letter_brainsci.md").read_text(), OUT / "cover_letter_brainsci.docx", title_style=False)
+        "# Supplementary material: Autistic adults more often report absent sensory imagery", 1)
+    render(supplement, OUT / "supplementary_material.docx")
 
 
 if __name__ == "__main__":

@@ -24,7 +24,14 @@ def fmt(text):
 
 
 def main():
-    OUT.parent.mkdir(parents=True, exist_ok=True)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", default="manuscript_working.md", help="manuscript file inside the submission folder")
+    parser.add_argument("--out", default=str(OUT))
+    parser.add_argument("--footer", default="P5 working copy | author sections and declarations incomplete")
+    args = parser.parse_args()
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name="BodyP5", fontName="Helvetica", fontSize=10.2, leading=14.3,
                               spaceAfter=8, textColor=colors.HexColor("#252d35")))
@@ -42,7 +49,7 @@ def main():
     styles.add(ParagraphStyle(name="CaptionP5", parent=styles["BodyP5"], fontSize=8.8, leading=12))
     styles.add(ParagraphStyle(name="TableTitleP5", parent=styles["BodyP5"], fontName="Helvetica-Bold", keepWithNext=True, spaceBefore=6))
     story = []
-    text = (SOURCE / "manuscript_working.md").read_text()
+    text = (SOURCE / args.source).read_text()
     text += "\n\n[P5_APPENDIX]\n\n" + (SOURCE / "supplement.md").read_text()
     # [INCLUDE file.md] pulls in a generated table; [FIGURE file.png | caption] places a figure.
     text = re.sub(r"^\[INCLUDE ([^\]]+)\]$", lambda m: (SOURCE / m.group(1)).read_text(), text, flags=re.M)
@@ -96,11 +103,11 @@ def main():
     def footer(canvas, doc):
         canvas.setStrokeColor(colors.HexColor("#d6dde2")); canvas.line(54, 43, 558, 43)
         canvas.setFont("Helvetica", 8); canvas.setFillColor(colors.HexColor("#65727d"))
-        canvas.drawString(54, 30, "P5 working copy | 18 October 2026 | author sections and declarations incomplete")
+        canvas.drawString(54, 30, args.footer)
         canvas.drawRightString(558, 30, str(doc.page))
-    SimpleDocTemplate(str(OUT), pagesize=letter, rightMargin=54, leftMargin=54, topMargin=48,
-                      bottomMargin=56, title="P5 manuscript working copy and submission review", author="Ivan Habib").build(story, onFirstPage=footer, onLaterPages=footer)
-    print(OUT)
+    SimpleDocTemplate(str(out), pagesize=letter, rightMargin=54, leftMargin=54, topMargin=48,
+                      bottomMargin=56, title="Autistic adults more often report absent sensory imagery", author="Ivan Habib").build(story, onFirstPage=footer, onLaterPages=footer)
+    print(out)
 
 
 if __name__ == "__main__":

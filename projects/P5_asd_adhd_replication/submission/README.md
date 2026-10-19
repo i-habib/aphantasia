@@ -1,6 +1,6 @@
 # P5 submission preparation
 
-Prepared 17 October 2026; restructured 18 October 2026 (registered replication plus an exploratory "where is the gap" section, main Tables 1-3, Figures 1-2, supplement Tables S1-S7 and Figure S1). Abstract, introduction and discussion drafted 18 October 2026. **Retargeted to MDPI Brain Sciences on 18 October 2026: see [brainsci/SUBMISSION_CHECKLIST.md](brainsci/SUBMISSION_CHECKLIST.md).** **Not ready to submit.** Previous drafts are in `../review/*_2026-10-17.md`.
+Prepared 17 October 2026; restructured 18 October 2026 (registered replication plus an exploratory "where is the gap" section, main Tables 1-3, Figures 1-2, supplement Tables S1-S7 and Figure S1). Abstract, introduction and discussion drafted 18 October 2026. **Target (19 October 2026): PsyArXiv preprint, then Cortex as a Research Report. Files are in [cortex/](cortex/).** A short-lived Brain Sciences version was dropped. **Not ready to submit.** Previous drafts are in `../review/*_2026-10-17.md`.
 
 The affiliation is Independent researcher. The author reports no ethics approval or exemption determination. This package does not invent either. The current journal guide could not be verified because access reached a CAPTCHA.
 
